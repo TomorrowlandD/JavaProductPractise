@@ -2,6 +2,8 @@ package ui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 
 /**
  * 主窗口类 - 程序的图形界面
@@ -29,8 +31,9 @@ public class MainWindow extends JFrame {
      * 
      * 该方法负责：
      * 1. 设置窗口的基本属性（标题、大小、关闭行为）
-     * 2. 创建选项卡面板
-     * 3. 添加5个空的标签页
+     * 2. 创建菜单栏
+     * 3. 创建选项卡面板
+     * 4. 添加5个空的标签页
      */
     private void initComponents() {
         // 设置窗口属性
@@ -38,6 +41,9 @@ public class MainWindow extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);  // 窗口居中显示
+        
+        // 创建菜单栏
+        setJMenuBar(createMenuBar());
         
         // 创建选项卡面板并设置字体
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -52,6 +58,69 @@ public class MainWindow extends JFrame {
         
         // 将选项卡面板添加到窗口
         add(tabbedPane);
+    }
+    
+    /**
+     * 创建菜单栏
+     * 
+     * @return 配置好的菜单栏
+     */
+    private JMenuBar createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        
+        // 创建文件菜单
+        JMenu fileMenu = new JMenu("文件");
+        fileMenu.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        fileMenu.setMnemonic(KeyEvent.VK_F);
+        
+        // 添加文件菜单项
+        JMenuItem saveItem = new JMenuItem("保存数据", KeyEvent.VK_S);
+        saveItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+        saveItem.addActionListener(e -> JOptionPane.showMessageDialog(
+            this, 
+            "数据保存功能将在第三阶段实现", 
+            "提示", 
+            JOptionPane.INFORMATION_MESSAGE
+        ));
+        
+        JMenuItem exitItem = new JMenuItem("退出", KeyEvent.VK_X);
+        exitItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
+        exitItem.addActionListener(e -> System.exit(0));
+        
+        fileMenu.add(saveItem);
+        fileMenu.addSeparator();
+        fileMenu.add(exitItem);
+        
+        // 创建帮助菜单
+        JMenu helpMenu = new JMenu("帮助");
+        helpMenu.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        helpMenu.setMnemonic(KeyEvent.VK_H);
+        
+        // 添加帮助菜单项
+        JMenuItem aboutItem = new JMenuItem("关于", KeyEvent.VK_A);
+        aboutItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        aboutItem.addActionListener(e -> JOptionPane.showMessageDialog(
+            this,
+            "个人健康管理器 v1.0\n\n" +
+            "这是一个基于Java Swing开发的健康管理应用程序，\n" +
+            "旨在帮助用户管理个人健康数据，制定运动计划，\n" +
+            "跟踪饮食情况，并提供数据分析功能。\n\n" +
+            "开发目的：Java GUI编程学习项目\n" +
+            "开发框架：Java Swing\n\n" +
+            "© 2025 个人健康管理器 - 学习项目",
+            "关于个人健康管理器",
+            JOptionPane.INFORMATION_MESSAGE
+        ));
+        
+        helpMenu.add(aboutItem);
+        
+        // 将菜单添加到菜单栏
+        menuBar.add(fileMenu);
+        menuBar.add(helpMenu);
+        
+        return menuBar;
     }
     
     /**
