@@ -30,6 +30,36 @@ public class MainWindow extends JFrame {
     }
     
     /**
+     * 获取支持中文的字体
+     * 按优先级尝试不同的中文字体，确保中文能正确显示
+     * 
+     * @param style 字体样式 (Font.PLAIN, Font.BOLD, Font.ITALIC)
+     * @param size 字体大小
+     * @return 支持中文的字体
+     */
+    private Font getChineseFont(int style, int size) {
+        // 按优先级尝试不同的中文字体
+        String[] fontNames = {
+            "微软雅黑", "Microsoft YaHei", "SimSun", "宋体", 
+            "SimHei", "黑体", "KaiTi", "楷体", "FangSong", "仿宋"
+        };
+        
+        for (String fontName : fontNames) {
+            try {
+                Font font = new Font(fontName, style, size);
+                if (font.canDisplay('中') && font.canDisplay('文')) {
+                    return font;
+                }
+            } catch (Exception e) {
+                // 忽略字体创建失败的情况，继续尝试下一个
+            }
+        }
+        
+        // 如果所有中文字体都不可用，使用系统默认字体
+        return new Font(Font.SANS_SERIF, style, size);
+    }
+    
+    /**
      * 初始化窗口组件
      * 
      * 该方法负责：
@@ -50,7 +80,7 @@ public class MainWindow extends JFrame {
         
         // 创建选项卡面板并设置字体
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        tabbedPane.setFont(getChineseFont(Font.PLAIN, 14));
         
         // 添加标签页
         tabbedPane.addTab("用户档案", new UserProfilePanel());  // 使用实际的用户档案面板
@@ -73,12 +103,12 @@ public class MainWindow extends JFrame {
         
         // 创建文件菜单
         JMenu fileMenu = new JMenu("文件");
-        fileMenu.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        fileMenu.setFont(getChineseFont(Font.PLAIN, 14));
         fileMenu.setMnemonic(KeyEvent.VK_F);
         
         // 添加文件菜单项
         JMenuItem saveItem = new JMenuItem("保存数据", KeyEvent.VK_S);
-        saveItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        saveItem.setFont(getChineseFont(Font.PLAIN, 14));
         saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
         saveItem.addActionListener(new java.awt.event.ActionListener() {
             @Override
@@ -93,7 +123,7 @@ public class MainWindow extends JFrame {
         });
         
         JMenuItem exitItem = new JMenuItem("退出", KeyEvent.VK_X);
-        exitItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        exitItem.setFont(getChineseFont(Font.PLAIN, 14));
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
         exitItem.addActionListener(new java.awt.event.ActionListener() {
             @Override
@@ -108,12 +138,12 @@ public class MainWindow extends JFrame {
         
         // 创建帮助菜单
         JMenu helpMenu = new JMenu("帮助");
-        helpMenu.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        helpMenu.setFont(getChineseFont(Font.PLAIN, 14));
         helpMenu.setMnemonic(KeyEvent.VK_H);
         
         // 添加帮助菜单项
         JMenuItem aboutItem = new JMenuItem("关于", KeyEvent.VK_A);
-        aboutItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        aboutItem.setFont(getChineseFont(Font.PLAIN, 14));
         aboutItem.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -154,7 +184,7 @@ public class MainWindow extends JFrame {
         
         // 创建提示信息标签
         JLabel messageLabel = new JLabel(message);
-        messageLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        messageLabel.setFont(getChineseFont(Font.PLAIN, 14));
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         messageLabel.setForeground(Color.GRAY);
         messageLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));

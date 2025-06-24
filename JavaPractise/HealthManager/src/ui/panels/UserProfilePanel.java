@@ -124,17 +124,47 @@ public class UserProfilePanel extends JPanel {
     }
     
     /**
+     * 获取支持中文的字体
+     * 按优先级尝试不同的中文字体，确保中文能正确显示
+     * 
+     * @param style 字体样式 (Font.PLAIN, Font.BOLD, Font.ITALIC)
+     * @param size 字体大小
+     * @return 支持中文的字体
+     */
+    private Font getChineseFont(int style, int size) {
+        // 按优先级尝试不同的中文字体
+        String[] fontNames = {
+            "微软雅黑", "Microsoft YaHei", "SimSun", "宋体", 
+            "SimHei", "黑体", "KaiTi", "楷体", "FangSong", "仿宋"
+        };
+        
+        for (String fontName : fontNames) {
+            try {
+                Font font = new Font(fontName, style, size);
+                if (font.canDisplay('中') && font.canDisplay('文')) {
+                    return font;
+                }
+            } catch (Exception e) {
+                // 忽略字体创建失败的情况，继续尝试下一个
+            }
+        }
+        
+        // 如果所有中文字体都不可用，使用系统默认字体
+        return new Font(Font.SANS_SERIF, style, size);
+    }
+    
+    /**
      * 设置组件样式
      */
     private void setupComponentStyles() {
         // 设置字体
-        Font defaultFont = new Font("微软雅黑", Font.PLAIN, 12);
-        Font labelFont = new Font("微软雅黑", Font.BOLD, 12);
+        Font defaultFont = getChineseFont(Font.PLAIN, 12);
+        Font labelFont = getChineseFont(Font.BOLD, 12);
         
         // BMI显示标签样式
         bmiLabel.setFont(labelFont);
         categoryLabel.setFont(labelFont);
-        idealWeightLabel.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+        idealWeightLabel.setFont(getChineseFont(Font.PLAIN, 11));
         
         // 按钮样式
         saveButton.setFont(defaultFont);
@@ -143,7 +173,7 @@ public class UserProfilePanel extends JPanel {
         reportButton.setFont(defaultFont);
         
         // 进度条样式
-        progressBar.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+        progressBar.setFont(getChineseFont(Font.PLAIN, 10));
         progressLabel.setFont(defaultFont);
         
         // 设置提示文本
@@ -168,7 +198,7 @@ public class UserProfilePanel extends JPanel {
         
         // 标题
         JLabel titleLabel = new JLabel("📋 个人档案", JLabel.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        titleLabel.setFont(getChineseFont(Font.BOLD, 16));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         mainPanel.add(titleLabel, gbc);
         
@@ -316,7 +346,7 @@ public class UserProfilePanel extends JPanel {
         
         gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
         JButton autoDateButton = new JButton("自动计算");
-        autoDateButton.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+        autoDateButton.setFont(getChineseFont(Font.PLAIN, 10));
         autoDateButton.addActionListener(e -> calculateSuggestedTargetDate());
         panel.add(autoDateButton, gbc);
         
@@ -1018,7 +1048,7 @@ public class UserProfilePanel extends JPanel {
             
             JTextArea textArea = new JTextArea(report.toString());
             textArea.setEditable(false);
-            textArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+            textArea.setFont(getChineseFont(Font.PLAIN, 12));
             JScrollPane scrollPane = new JScrollPane(textArea);
             scrollPane.setPreferredSize(new Dimension(400, 300));
             
