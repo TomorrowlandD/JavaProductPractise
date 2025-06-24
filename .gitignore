@@ -1,1 +1,6 @@
 JavaPractise/HealthManager/classes/*.class
+out/.class
+out/production/JavaProductPractise/*.class
+out/production/JavaProductPractise/ui/panels/*.class
+out/production/JavaProductPractise/ui/*.class
+out/production/JavaProductPractise/model/*.class
