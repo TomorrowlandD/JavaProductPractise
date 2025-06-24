@@ -37,6 +37,15 @@ public class UserProfilePanel extends JPanel {
     private JLabel progressLabel;
     private JTextArea healthNotesArea;
     
+    // 健康状况复选框组件
+    private JCheckBox noHealthIssuesBox;
+    private JCheckBox hypertensionBox;
+    private JCheckBox diabetesBox;
+    private JCheckBox heartDiseaseBox;
+    private JCheckBox jointProblemsBox;
+    private JCheckBox allergiesBox;
+    private JCheckBox chronicDiseaseBox;
+    
     // 操作按钮
     private JButton saveButton;
     private JButton calculateButton;
@@ -90,6 +99,15 @@ public class UserProfilePanel extends JPanel {
         healthNotesArea = new JTextArea(2, 20);
         healthNotesArea.setLineWrap(true);
         healthNotesArea.setWrapStyleWord(true);
+        
+        // 健康状况复选框组件
+        noHealthIssuesBox = new JCheckBox("无特殊疾病史");
+        hypertensionBox = new JCheckBox("高血压");
+        diabetesBox = new JCheckBox("糖尿病");
+        heartDiseaseBox = new JCheckBox("心脏病");
+        jointProblemsBox = new JCheckBox("关节问题");
+        allergiesBox = new JCheckBox("过敏");
+        chronicDiseaseBox = new JCheckBox("慢性疾病");
         
         // 操作按钮
         saveButton = new JButton("💾 保存信息");
@@ -166,9 +184,9 @@ public class UserProfilePanel extends JPanel {
         gbc.gridy++; gbc.gridwidth = 2;
         mainPanel.add(createHealthGoalPanel(), gbc);
         
-        // 额外信息面板
+        // 健康状况复选框面板
         gbc.gridy++; gbc.gridwidth = 2;
-        mainPanel.add(createExtraInfoPanel(), gbc);
+        mainPanel.add(createHealthStatusPanel(), gbc);
         
         // 操作按钮面板
         gbc.gridy++; gbc.gridwidth = 2;
@@ -314,6 +332,32 @@ public class UserProfilePanel extends JPanel {
     }
     
     /**
+     * 创建健康状况复选框面板
+     */
+    private JPanel createHealthStatusPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("🏥 健康状况"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 3, 3, 3);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("健康状况:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        statusPanel.add(noHealthIssuesBox);
+        statusPanel.add(hypertensionBox);
+        statusPanel.add(diabetesBox);
+        statusPanel.add(heartDiseaseBox);
+        statusPanel.add(jointProblemsBox);
+        statusPanel.add(allergiesBox);
+        statusPanel.add(chronicDiseaseBox);
+        panel.add(statusPanel, gbc);
+        
+        return panel;
+    }
+    
+    /**
      * 创建额外信息面板
      */
     private JPanel createExtraInfoPanel() {
@@ -395,11 +439,62 @@ public class UserProfilePanel extends JPanel {
             validateAndCalculate();
         });
         
+        // 健康状况复选框逻辑
+        setupHealthStatusLogic();
+        
         // 按钮事件
         saveButton.addActionListener(e -> saveUserProfile());
         calculateButton.addActionListener(e -> calculateAll());
         clearButton.addActionListener(e -> clearAll());
         reportButton.addActionListener(e -> showReport());
+    }
+    
+    /**
+     * 设置健康状况复选框逻辑
+     */
+    private void setupHealthStatusLogic() {
+        // "无特殊疾病史"复选框的特殊逻辑
+        noHealthIssuesBox.addActionListener(e -> {
+            if (noHealthIssuesBox.isSelected()) {
+                // 选中"无特殊疾病史"时，取消其他所有选项并禁用
+                hypertensionBox.setSelected(false);
+                diabetesBox.setSelected(false);
+                heartDiseaseBox.setSelected(false);
+                jointProblemsBox.setSelected(false);
+                allergiesBox.setSelected(false);
+                chronicDiseaseBox.setSelected(false);
+                
+                hypertensionBox.setEnabled(false);
+                diabetesBox.setEnabled(false);
+                heartDiseaseBox.setEnabled(false);
+                jointProblemsBox.setEnabled(false);
+                allergiesBox.setEnabled(false);
+                chronicDiseaseBox.setEnabled(false);
+            } else {
+                // 取消"无特殊疾病史"时，重新启用其他选项
+                hypertensionBox.setEnabled(true);
+                diabetesBox.setEnabled(true);
+                heartDiseaseBox.setEnabled(true);
+                jointProblemsBox.setEnabled(true);
+                allergiesBox.setEnabled(true);
+                chronicDiseaseBox.setEnabled(true);
+            }
+        });
+        
+        // 其他健康状况复选框的逻辑
+        JCheckBox[] healthIssueBoxes = {
+            hypertensionBox, diabetesBox, heartDiseaseBox, 
+            jointProblemsBox, allergiesBox, chronicDiseaseBox
+        };
+        
+        for (JCheckBox box : healthIssueBoxes) {
+            box.addActionListener(e -> {
+                if (box.isSelected()) {
+                    // 选中任何健康问题时，自动取消"无特殊疾病史"
+                    noHealthIssuesBox.setSelected(false);
+                }
+            });
+        }
     }
     
     /**
@@ -412,6 +507,11 @@ public class UserProfilePanel extends JPanel {
         
         // 设置默认健康备注
         healthNotesArea.setText("无特殊疾病史");
+        
+        // 设置默认健康状况为"无特殊疾病史"
+        noHealthIssuesBox.setSelected(true);
+        // 触发事件处理器来禁用其他选项
+        noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
         
         updateStatusLabels();
     }
@@ -750,6 +850,47 @@ public class UserProfilePanel extends JPanel {
         profile.setFitnessGoal((String) fitnessGoalBox.getSelectedItem());
         profile.setHealthNotes(healthNotesArea.getText().trim());
         
+        // 收集健康状况信息
+        StringBuilder healthStatus = new StringBuilder();
+        if (noHealthIssuesBox.isSelected()) {
+            healthStatus.append("无特殊疾病史");
+        } else {
+            boolean hasAnyStatus = false;
+            if (hypertensionBox.isSelected()) {
+                healthStatus.append("高血压");
+                hasAnyStatus = true;
+            }
+            if (diabetesBox.isSelected()) {
+                if (hasAnyStatus) healthStatus.append(", ");
+                healthStatus.append("糖尿病");
+                hasAnyStatus = true;
+            }
+            if (heartDiseaseBox.isSelected()) {
+                if (hasAnyStatus) healthStatus.append(", ");
+                healthStatus.append("心脏病");
+                hasAnyStatus = true;
+            }
+            if (jointProblemsBox.isSelected()) {
+                if (hasAnyStatus) healthStatus.append(", ");
+                healthStatus.append("关节问题");
+                hasAnyStatus = true;
+            }
+            if (allergiesBox.isSelected()) {
+                if (hasAnyStatus) healthStatus.append(", ");
+                healthStatus.append("过敏");
+                hasAnyStatus = true;
+            }
+            if (chronicDiseaseBox.isSelected()) {
+                if (hasAnyStatus) healthStatus.append(", ");
+                healthStatus.append("慢性疾病");
+                hasAnyStatus = true;
+            }
+            if (!hasAnyStatus) {
+                healthStatus.append("未选择");
+            }
+        }
+        profile.setHealthStatus(healthStatus.toString());
+        
         return profile;
     }
     
@@ -778,6 +919,32 @@ public class UserProfilePanel extends JPanel {
                 healthNotesArea.setText(profile.getHealthNotes());
             }
             
+            // 恢复健康状况复选框
+            if (profile.getHealthStatus() != null) {
+                String healthStatus = profile.getHealthStatus();
+                // 先清空所有选择
+                noHealthIssuesBox.setSelected(false);
+                hypertensionBox.setSelected(false);
+                diabetesBox.setSelected(false);
+                heartDiseaseBox.setSelected(false);
+                jointProblemsBox.setSelected(false);
+                allergiesBox.setSelected(false);
+                chronicDiseaseBox.setSelected(false);
+                
+                if (healthStatus.contains("无特殊疾病史")) {
+                    noHealthIssuesBox.setSelected(true);
+                } else {
+                    if (healthStatus.contains("高血压")) hypertensionBox.setSelected(true);
+                    if (healthStatus.contains("糖尿病")) diabetesBox.setSelected(true);
+                    if (healthStatus.contains("心脏病")) heartDiseaseBox.setSelected(true);
+                    if (healthStatus.contains("关节问题")) jointProblemsBox.setSelected(true);
+                    if (healthStatus.contains("过敏")) allergiesBox.setSelected(true);
+                    if (healthStatus.contains("慢性疾病")) chronicDiseaseBox.setSelected(true);
+                }
+                // 触发逻辑处理
+                setupHealthStatusLogic();
+            }
+            
             currentProfile = profile;
             validateAndCalculate();
             updateStatusLabels();
@@ -799,6 +966,19 @@ public class UserProfilePanel extends JPanel {
             targetWeightField.setText("");
             fitnessGoalBox.setSelectedIndex(0);
             healthNotesArea.setText("无特殊疾病史");
+            
+            // 重置健康状况复选框
+            noHealthIssuesBox.setSelected(true);
+            hypertensionBox.setSelected(false);
+            diabetesBox.setSelected(false);
+            heartDiseaseBox.setSelected(false);
+            jointProblemsBox.setSelected(false);
+            allergiesBox.setSelected(false);
+            chronicDiseaseBox.setSelected(false);
+            // 触发逻辑处理来禁用其他选项
+            if (noHealthIssuesBox.getActionListeners().length > 0) {
+                noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
+            }
             
             bmiLabel.setText("BMI: --");
             categoryLabel.setText("健康状态: --");

@@ -31,6 +31,7 @@ public class UserProfile implements Serializable {
     // 联系和备注信息
     private String phone;             // 电话（可选）
     private String healthNotes;       // 健康备注（可选）
+    private String healthStatus;      // 健康状况（复选框选择结果）
     private LocalDate targetDate;     // 目标达成日期
     
     // 系统信息
@@ -133,6 +134,15 @@ public class UserProfile implements Serializable {
     
     public void setHealthNotes(String healthNotes) {
         this.healthNotes = healthNotes;
+        this.lastUpdated = LocalDate.now();
+    }
+    
+    public String getHealthStatus() {
+        return healthStatus;
+    }
+    
+    public void setHealthStatus(String healthStatus) {
+        this.healthStatus = healthStatus;
         this.lastUpdated = LocalDate.now();
     }
     
