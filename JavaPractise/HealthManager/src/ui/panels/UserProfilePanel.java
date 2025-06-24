@@ -1,0 +1,875 @@
+package ui.panels;
+
+import model.UserProfile;
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * 用户档案界面面板
+ * 提供用户基本信息输入、健康数据计算和目标管理功能
+ */
+public class UserProfilePanel extends JPanel {
+    private static final long serialVersionUID = 1L;
+    
+    // 基本信息组件
+    private JTextField nameField;
+    private JSpinner ageSpinner;
+    private JRadioButton maleRadio, femaleRadio;
+    private JTextField phoneField;
+    
+    // 身体数据组件
+    private JTextField heightField;
+    private JTextField weightField;
+    private JLabel bmiLabel;
+    private JLabel categoryLabel;
+    private JLabel idealWeightLabel;
+    
+    // 健康目标组件
+    private JTextField targetWeightField;
+    private JComboBox<String> fitnessGoalBox;
+    private JTextField targetDateField;
+    private JProgressBar progressBar;
+    private JLabel progressLabel;
+    private JTextArea healthNotesArea;
+    
+    // 操作按钮
+    private JButton saveButton;
+    private JButton calculateButton;
+    private JButton clearButton;
+    private JButton reportButton;
+    
+    // 状态信息
+    private JLabel lastUpdatedLabel;
+    private JLabel createdLabel;
+    
+    // 当前用户档案对象
+    private UserProfile currentProfile;
+    
+    @SuppressWarnings("this-escape")
+    public UserProfilePanel() {
+        initializeComponents();
+        setupLayout();
+        setupEventHandlers();
+        setupDefaults();
+    }
+    
+    /**
+     * 初始化所有UI组件
+     */
+    private void initializeComponents() {
+        // 基本信息组件
+        nameField = new JTextField(15);
+        ageSpinner = new JSpinner(new SpinnerNumberModel(25, UserProfile.MIN_AGE, UserProfile.MAX_AGE, 1));
+        maleRadio = new JRadioButton("男", true);
+        femaleRadio = new JRadioButton("女");
+        ButtonGroup genderGroup = new ButtonGroup();
+        genderGroup.add(maleRadio);
+        genderGroup.add(femaleRadio);
+        phoneField = new JTextField(15);
+        
+        // 身体数据组件
+        heightField = new JTextField(8);
+        weightField = new JTextField(8);
+        bmiLabel = new JLabel("BMI: --");
+        categoryLabel = new JLabel("健康状态: --");
+        idealWeightLabel = new JLabel("理想体重: --");
+        
+        // 健康目标组件
+        targetWeightField = new JTextField(8);
+        String[] fitnessGoals = {"减脂塑形", "增肌健身", "维持体重", "增重增肌", "运动康复"};
+        fitnessGoalBox = new JComboBox<>(fitnessGoals);
+        targetDateField = new JTextField(10);
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressLabel = new JLabel("进度: 0%");
+        healthNotesArea = new JTextArea(2, 20);
+        healthNotesArea.setLineWrap(true);
+        healthNotesArea.setWrapStyleWord(true);
+        
+        // 操作按钮
+        saveButton = new JButton("💾 保存信息");
+        calculateButton = new JButton("🔄 重新计算");
+        clearButton = new JButton("🗑️ 清空");
+        reportButton = new JButton("📊 查看报告");
+        
+        // 状态信息
+        lastUpdatedLabel = new JLabel("最后更新: --");
+        createdLabel = new JLabel("创建: --");
+        
+        // 设置组件样式
+        setupComponentStyles();
+    }
+    
+    /**
+     * 设置组件样式
+     */
+    private void setupComponentStyles() {
+        // 设置字体
+        Font defaultFont = new Font("微软雅黑", Font.PLAIN, 12);
+        Font labelFont = new Font("微软雅黑", Font.BOLD, 12);
+        
+        // BMI显示标签样式
+        bmiLabel.setFont(labelFont);
+        categoryLabel.setFont(labelFont);
+        idealWeightLabel.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+        
+        // 按钮样式
+        saveButton.setFont(defaultFont);
+        calculateButton.setFont(defaultFont);
+        clearButton.setFont(defaultFont);
+        reportButton.setFont(defaultFont);
+        
+        // 进度条样式
+        progressBar.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+        progressLabel.setFont(defaultFont);
+        
+        // 设置提示文本
+        nameField.setToolTipText("请输入您的姓名");
+        heightField.setToolTipText("请输入身高（cm）");
+        weightField.setToolTipText("请输入体重（kg）");
+        targetWeightField.setToolTipText("请输入目标体重（kg）");
+        healthNotesArea.setToolTipText("可填写健康状况备注，如疾病史、运动限制等");
+    }
+    
+    /**
+     * 设置界面布局
+     */
+    private void setupLayout() {
+        setLayout(new BorderLayout());
+        
+        // 主面板
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // 标题
+        JLabel titleLabel = new JLabel("📋 个人档案", JLabel.CENTER);
+        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        mainPanel.add(titleLabel, gbc);
+        
+        // 基本信息面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createBasicInfoPanel(), gbc);
+        
+        // 身体数据面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createBodyDataPanel(), gbc);
+        
+        // 健康目标面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createHealthGoalPanel(), gbc);
+        
+        // 额外信息面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createExtraInfoPanel(), gbc);
+        
+        // 操作按钮面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createButtonPanel(), gbc);
+        
+        // 状态信息面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createStatusPanel(), gbc);
+        
+        // 添加滚动支持
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        
+        add(scrollPane, BorderLayout.CENTER);
+    }
+    
+    /**
+     * 创建基本信息面板
+     */
+    private JPanel createBasicInfoPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("👤 基本信息"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 3, 3, 3);
+        
+        // 第一行：姓名和性别
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        panel.add(new JLabel("姓名:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(nameField, gbc);
+        
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("性别:"), gbc);
+        gbc.gridx = 3;
+        JPanel genderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        genderPanel.add(maleRadio);
+        genderPanel.add(femaleRadio);
+        panel.add(genderPanel, gbc);
+        
+        // 第二行：年龄和电话
+        gbc.gridx = 0; gbc.gridy = 1; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("年龄:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JPanel agePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        agePanel.add(ageSpinner);
+        agePanel.add(new JLabel("岁"));
+        panel.add(agePanel, gbc);
+        
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("电话:"), gbc);
+        gbc.gridx = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(phoneField, gbc);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建身体数据面板
+     */
+    private JPanel createBodyDataPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("📏 身体数据"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 3, 3, 3);
+        
+        // 第一行：身高和BMI
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        panel.add(new JLabel("身高:"), gbc);
+        gbc.gridx = 1;
+        JPanel heightPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        heightPanel.add(heightField);
+        heightPanel.add(new JLabel("cm"));
+        panel.add(heightPanel, gbc);
+        
+        gbc.gridx = 2;
+        panel.add(bmiLabel, gbc);
+        
+        // 第二行：体重和健康状态
+        gbc.gridx = 0; gbc.gridy = 1;
+        panel.add(new JLabel("体重:"), gbc);
+        gbc.gridx = 1;
+        JPanel weightPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        weightPanel.add(weightField);
+        weightPanel.add(new JLabel("kg"));
+        panel.add(weightPanel, gbc);
+        
+        gbc.gridx = 2;
+        panel.add(categoryLabel, gbc);
+        
+        // 第三行：理想体重
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 3;
+        panel.add(idealWeightLabel, gbc);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建健康目标面板
+     */
+    private JPanel createHealthGoalPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("🎯 健康目标"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 3, 3, 3);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // 第一行：目标体重和健身目标
+        gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("目标体重:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JPanel targetWeightPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        targetWeightPanel.add(targetWeightField);
+        targetWeightPanel.add(new JLabel("kg"));
+        panel.add(targetWeightPanel, gbc);
+        
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("健身目标:"), gbc);
+        gbc.gridx = 3; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(fitnessGoalBox, gbc);
+        
+        // 第二行：目标日期
+        gbc.gridx = 0; gbc.gridy = 1; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("目标日期:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(targetDateField, gbc);
+        
+        gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
+        JButton autoDateButton = new JButton("自动计算");
+        autoDateButton.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+        autoDateButton.addActionListener(e -> calculateSuggestedTargetDate());
+        panel.add(autoDateButton, gbc);
+        
+        // 第三行：进度条
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 4; gbc.fill = GridBagConstraints.HORIZONTAL;
+        JPanel progressPanel = new JPanel(new BorderLayout());
+        progressPanel.add(new JLabel("完成进度:"), BorderLayout.WEST);
+        progressPanel.add(progressBar, BorderLayout.CENTER);
+        progressPanel.add(progressLabel, BorderLayout.EAST);
+        panel.add(progressPanel, gbc);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建额外信息面板
+     */
+    private JPanel createExtraInfoPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("📝 额外信息"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(3, 3, 3, 3);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("健康备注:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        panel.add(new JScrollPane(healthNotesArea), gbc);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建操作按钮面板
+     */
+    private JPanel createButtonPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new TitledBorder("💾 数据管理"));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(saveButton, gbc);
+        gbc.gridx = 1;
+        panel.add(calculateButton, gbc);
+        gbc.gridx = 2;
+        panel.add(clearButton, gbc);
+        gbc.gridx = 3;
+        panel.add(reportButton, gbc);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建状态信息面板
+     */
+    private JPanel createStatusPanel() {
+        JPanel panel = new JPanel(new FlowLayout());
+        panel.add(lastUpdatedLabel);
+        panel.add(new JLabel(" | "));
+        panel.add(createdLabel);
+        return panel;
+    }
+    
+    /**
+     * 设置事件处理
+     */
+    private void setupEventHandlers() {
+        // 实时BMI计算
+        heightField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                validateAndCalculate();
+            }
+        });
+        
+        weightField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                validateAndCalculate();
+            }
+        });
+        
+        targetWeightField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                updateProgressDisplay();
+            }
+        });
+        
+        // 健身目标改变时重新验证目标体重的一致性
+        fitnessGoalBox.addActionListener(e -> {
+            // 重新验证目标体重
+            validateAndCalculate();
+        });
+        
+        // 按钮事件
+        saveButton.addActionListener(e -> saveUserProfile());
+        calculateButton.addActionListener(e -> calculateAll());
+        clearButton.addActionListener(e -> clearAll());
+        reportButton.addActionListener(e -> showReport());
+    }
+    
+    /**
+     * 设置默认值
+     */
+    private void setupDefaults() {
+        // 设置默认目标日期为3个月后
+        LocalDate defaultTarget = LocalDate.now().plusMonths(3);
+        targetDateField.setText(defaultTarget.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        
+        // 设置默认健康备注
+        healthNotesArea.setText("无特殊疾病史");
+        
+        updateStatusLabels();
+    }
+    
+    /**
+     * 验证输入并计算BMI
+     */
+    private void validateAndCalculate() {
+        // 验证身高
+        validateFieldValue(heightField, "身高", (text) -> {
+            try {
+                double height = Double.parseDouble(text);
+                return UserProfile.validateHeight(height);
+            } catch (NumberFormatException e) {
+                return new UserProfile.ValidationResult(false, "请输入有效的数字");
+            }
+        });
+        
+        // 验证体重
+        validateFieldValue(weightField, "体重", (text) -> {
+            try {
+                double weight = Double.parseDouble(text);
+                return UserProfile.validateWeight(weight);
+            } catch (NumberFormatException e) {
+                return new UserProfile.ValidationResult(false, "请输入有效的数字");
+            }
+        });
+        
+        // 验证目标体重
+        validateFieldValue(targetWeightField, "目标体重", (text) -> {
+            try {
+                if (text.isEmpty()) {
+                    return new UserProfile.ValidationResult(true, "目标体重为可选项");
+                }
+                double targetWeight = Double.parseDouble(text);
+                String currentWeightText = weightField.getText().trim();
+                if (!currentWeightText.isEmpty()) {
+                    try {
+                        double currentWeight = Double.parseDouble(currentWeightText);
+                        
+                        // 首先验证目标体重本身
+                        UserProfile.ValidationResult targetResult = UserProfile.validateTargetWeight(currentWeight, targetWeight);
+                        if (!targetResult.isValid()) {
+                            return targetResult;
+                        }
+                        
+                        // 然后验证与健身目标的一致性
+                        String fitnessGoal = (String) fitnessGoalBox.getSelectedItem();
+                        UserProfile.ValidationResult consistencyResult = UserProfile.validateGoalConsistency(currentWeight, targetWeight, fitnessGoal);
+                        if (!consistencyResult.isValid()) {
+                            return consistencyResult;
+                        }
+                        
+                        return new UserProfile.ValidationResult(true, "目标体重设置合理且与健身目标一致");
+                    } catch (NumberFormatException e) {
+                        return UserProfile.validateWeight(targetWeight);
+                    }
+                }
+                return UserProfile.validateWeight(targetWeight);
+            } catch (NumberFormatException e) {
+                return new UserProfile.ValidationResult(false, "请输入有效的数字");
+            }
+        });
+        
+        // 如果身高和体重都有效，计算BMI
+        try {
+            String heightText = heightField.getText().trim();
+            String weightText = weightField.getText().trim();
+            
+            if (!heightText.isEmpty() && !weightText.isEmpty()) {
+                double height = Double.parseDouble(heightText);
+                double weight = Double.parseDouble(weightText);
+                
+                UserProfile.ValidationResult heightResult = UserProfile.validateHeight(height);
+                UserProfile.ValidationResult weightResult = UserProfile.validateWeight(weight);
+                
+                if (heightResult.isValid() && weightResult.isValid()) {
+                    // 计算BMI
+                    double bmi = weight / ((height / 100) * (height / 100));
+                    String category = getBMICategory(bmi);
+                    Color categoryColor = getBMIColor(bmi);
+                    
+                    bmiLabel.setText(String.format("BMI: %.1f", bmi));
+                    categoryLabel.setText(category);
+                    categoryLabel.setForeground(categoryColor);
+                    
+                    // 计算理想体重范围
+                    double minIdeal = 18.5 * (height / 100) * (height / 100);
+                    double maxIdeal = 24.0 * (height / 100) * (height / 100);
+                    idealWeightLabel.setText(String.format("理想体重: %.0f-%.0f kg", minIdeal, maxIdeal));
+                    
+                    updateProgressDisplay();
+                } else {
+                    // 清空BMI显示
+                    bmiLabel.setText("BMI: --");
+                    categoryLabel.setText("健康状态: --");
+                    idealWeightLabel.setText("理想体重: --");
+                }
+            }
+        } catch (NumberFormatException e) {
+            // 格式错误已经在上面处理了
+        }
+    }
+    
+    /**
+     * 验证单个字段的值
+     */
+    private void validateFieldValue(JTextField field, String fieldName, FieldValidator validator) {
+        String text = field.getText().trim();
+        
+        if (text.isEmpty()) {
+            field.setBackground(Color.WHITE);
+            field.setToolTipText("请输入" + fieldName);
+            return;
+        }
+        
+        UserProfile.ValidationResult result = validator.validate(text);
+        if (result.isValid()) {
+            field.setBackground(Color.WHITE);
+            field.setToolTipText(result.getMessage());
+        } else {
+            field.setBackground(new Color(255, 220, 220));
+            field.setToolTipText("❌ " + result.getMessage());
+        }
+    }
+    
+    /**
+     * 字段验证器接口
+     */
+    private interface FieldValidator {
+        UserProfile.ValidationResult validate(String text);
+    }
+    
+    /**
+     * 获取BMI分类
+     */
+    private String getBMICategory(double bmi) {
+        if (bmi < 18.5) return "🔵 偏瘦";
+        if (bmi < 24.0) return "🟢 正常";
+        if (bmi < 28.0) return "🟡 超重";
+        return "🔴 肥胖";
+    }
+    
+    /**
+     * 获取BMI对应的颜色
+     */
+    private Color getBMIColor(double bmi) {
+        if (bmi < 18.5 || bmi >= 28.0) return Color.RED;
+        if (bmi < 20.0 || bmi >= 25.0) return Color.ORANGE;
+        return new Color(0, 150, 0);
+    }
+    
+    /**
+     * 更新进度显示
+     */
+    private void updateProgressDisplay() {
+        try {
+            String weightText = weightField.getText().trim();
+            String targetText = targetWeightField.getText().trim();
+            
+            if (!weightText.isEmpty() && !targetText.isEmpty()) {
+                double currentWeight = Double.parseDouble(weightText);
+                double targetWeight = Double.parseDouble(targetText);
+                
+                // 假设起始体重比当前重3kg（简化计算）
+                double startWeight = currentWeight + (currentWeight > targetWeight ? 3 : -3);
+                
+                if (startWeight != targetWeight) {
+                    double progress = Math.abs((startWeight - currentWeight) / (startWeight - targetWeight)) * 100;
+                    progress = Math.max(0, Math.min(100, progress));
+                    
+                    progressBar.setValue((int) progress);
+                    progressLabel.setText(String.format("%.0f%% 完成", progress));
+                    
+                    double diff = currentWeight - targetWeight;
+                    if (Math.abs(diff) < 0.5) {
+                        progressLabel.setText("🎉 目标达成！");
+                        progressLabel.setForeground(Color.GREEN);
+                    } else {
+                        String direction = diff > 0 ? "减重" : "增重";
+                        progressLabel.setText(String.format("需%s: %.1fkg", direction, Math.abs(diff)));
+                        progressLabel.setForeground(Color.BLACK);
+                    }
+                }
+            }
+        } catch (NumberFormatException e) {
+            // 忽略解析错误
+        }
+    }
+    
+    /**
+     * 计算建议目标日期
+     */
+    private void calculateSuggestedTargetDate() {
+        try {
+            String weightText = weightField.getText().trim();
+            String targetText = targetWeightField.getText().trim();
+            
+            if (!weightText.isEmpty() && !targetText.isEmpty()) {
+                double currentWeight = Double.parseDouble(weightText);
+                double targetWeight = Double.parseDouble(targetText);
+                double weightDiff = Math.abs(currentWeight - targetWeight);
+                
+                // 健康减重速度：0.5kg/周，增重速度：0.3kg/周
+                double weeklyRate = targetWeight < currentWeight ? 0.5 : 0.3;
+                int weeksNeeded = (int) Math.ceil(weightDiff / weeklyRate);
+                
+                LocalDate suggestedDate = LocalDate.now().plusWeeks(weeksNeeded);
+                targetDateField.setText(suggestedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                
+                JOptionPane.showMessageDialog(this, 
+                    String.format("建议在 %d 周内达成目标\n每周%s约 %.1fkg", 
+                                 weeksNeeded, 
+                                 targetWeight < currentWeight ? "减重" : "增重",
+                                 weeklyRate),
+                    "目标日期建议", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "请先填写当前体重和目标体重！", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+    
+    /**
+     * 计算所有数据
+     */
+    private void calculateAll() {
+        validateAndCalculate();
+        updateProgressDisplay();
+        JOptionPane.showMessageDialog(this, "计算完成！", "提示", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    /**
+     * 保存用户档案
+     */
+    private void saveUserProfile() {
+        try {
+            // 首先验证年龄（从Spinner获取）
+            int age = (Integer) ageSpinner.getValue();
+            UserProfile.ValidationResult ageResult = UserProfile.validateAge(age);
+            if (!ageResult.isValid()) {
+                JOptionPane.showMessageDialog(this, "年龄验证失败：" + ageResult.getMessage(), 
+                                            "数据验证错误", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // 验证姓名
+            String name = nameField.getText().trim();
+            UserProfile.ValidationResult nameResult = UserProfile.validateName(name);
+            if (!nameResult.isValid()) {
+                JOptionPane.showMessageDialog(this, "姓名验证失败：" + nameResult.getMessage(), 
+                                            "数据验证错误", JOptionPane.WARNING_MESSAGE);
+                nameField.requestFocus();
+                return;
+            }
+            
+            // 验证电话
+            String phone = phoneField.getText().trim();
+            UserProfile.ValidationResult phoneResult = UserProfile.validatePhone(phone);
+            if (!phoneResult.isValid()) {
+                JOptionPane.showMessageDialog(this, "电话验证失败：" + phoneResult.getMessage(), 
+                                            "数据验证错误", JOptionPane.WARNING_MESSAGE);
+                phoneField.requestFocus();
+                return;
+            }
+            
+            UserProfile profile = getProfileFromUI();
+            
+            // 使用完整的数据验证
+            UserProfile.ValidationResult validationResult = profile.validateProfile();
+            if (validationResult.isValid()) {
+                // 检查基本信息是否完整
+                if (profile.isProfileComplete()) {
+                    currentProfile = profile;
+                    updateStatusLabels();
+                    
+                    // 显示详细的保存成功信息
+                    String successMessage = "用户信息保存成功！\n\n" +
+                                          "✅ 基本信息已验证通过\n" +
+                                          "✅ 所有数值都在合理范围内\n" +
+                                          "✅ 数据格式正确";
+                    
+                    if (profile.getHeight() > 0 && profile.getWeight() > 0) {
+                        successMessage += String.format("\n\n您的BMI指数：%.1f (%s)", 
+                                                       profile.calculateBMI(), 
+                                                       profile.getBMICategory());
+                    }
+                    
+                    JOptionPane.showMessageDialog(this, successMessage, "保存成功", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "请填写完整的基本信息：\n" +
+                        "• 姓名（必填）\n" +
+                        "• 年龄（必填）\n" +
+                        "• 性别（必选）\n" +
+                        "• 身高（必填）\n" +
+                        "• 体重（必填）", 
+                        "信息不完整", JOptionPane.WARNING_MESSAGE);
+                }
+            } else {
+                // 显示具体的验证错误信息
+                JOptionPane.showMessageDialog(this, 
+                    "数据验证失败：\n\n❌ " + validationResult.getMessage() + 
+                    "\n\n请检查并修正输入的数据。", 
+                    "数据验证错误", JOptionPane.WARNING_MESSAGE);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "保存失败：" + e.getMessage() + 
+                "\n\n请检查输入的数据格式是否正确。", 
+                "保存错误", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * 从界面获取用户档案数据
+     */
+    private UserProfile getProfileFromUI() {
+        UserProfile profile = new UserProfile();
+        
+        profile.setName(nameField.getText().trim());
+        profile.setAge((Integer) ageSpinner.getValue());
+        profile.setGender(maleRadio.isSelected() ? "男" : "女");
+        profile.setPhone(phoneField.getText().trim());
+        
+        if (!heightField.getText().trim().isEmpty()) {
+            profile.setHeight(Double.parseDouble(heightField.getText().trim()));
+        }
+        if (!weightField.getText().trim().isEmpty()) {
+            profile.setWeight(Double.parseDouble(weightField.getText().trim()));
+        }
+        if (!targetWeightField.getText().trim().isEmpty()) {
+            profile.setTargetWeight(Double.parseDouble(targetWeightField.getText().trim()));
+        }
+        
+        profile.setFitnessGoal((String) fitnessGoalBox.getSelectedItem());
+        profile.setHealthNotes(healthNotesArea.getText().trim());
+        
+        return profile;
+    }
+    
+    /**
+     * 将用户档案数据设置到界面
+     */
+    public void setProfileToUI(UserProfile profile) {
+        if (profile != null) {
+            nameField.setText(profile.getName() != null ? profile.getName() : "");
+            ageSpinner.setValue(profile.getAge());
+            if ("女".equals(profile.getGender())) {
+                femaleRadio.setSelected(true);
+            } else {
+                maleRadio.setSelected(true);
+            }
+            phoneField.setText(profile.getPhone() != null ? profile.getPhone() : "");
+            
+            heightField.setText(profile.getHeight() > 0 ? String.valueOf(profile.getHeight()) : "");
+            weightField.setText(profile.getWeight() > 0 ? String.valueOf(profile.getWeight()) : "");
+            targetWeightField.setText(profile.getTargetWeight() > 0 ? String.valueOf(profile.getTargetWeight()) : "");
+            
+            if (profile.getFitnessGoal() != null) {
+                fitnessGoalBox.setSelectedItem(profile.getFitnessGoal());
+            }
+            if (profile.getHealthNotes() != null) {
+                healthNotesArea.setText(profile.getHealthNotes());
+            }
+            
+            currentProfile = profile;
+            validateAndCalculate();
+            updateStatusLabels();
+        }
+    }
+    
+    /**
+     * 清空所有输入
+     */
+    private void clearAll() {
+        int result = JOptionPane.showConfirmDialog(this, "确定要清空所有信息吗？", "确认清空", JOptionPane.YES_NO_OPTION);
+        if (result == JOptionPane.YES_OPTION) {
+            nameField.setText("");
+            ageSpinner.setValue(25);
+            maleRadio.setSelected(true);
+            phoneField.setText("");
+            heightField.setText("");
+            weightField.setText("");
+            targetWeightField.setText("");
+            fitnessGoalBox.setSelectedIndex(0);
+            healthNotesArea.setText("无特殊疾病史");
+            
+            bmiLabel.setText("BMI: --");
+            categoryLabel.setText("健康状态: --");
+            idealWeightLabel.setText("理想体重: --");
+            progressBar.setValue(0);
+            progressLabel.setText("进度: 0%");
+            
+            // 重置背景色
+            heightField.setBackground(Color.WHITE);
+            weightField.setBackground(Color.WHITE);
+            
+            currentProfile = null;
+            updateStatusLabels();
+        }
+    }
+    
+    /**
+     * 显示报告
+     */
+    private void showReport() {
+        if (currentProfile != null && currentProfile.isProfileComplete()) {
+            StringBuilder report = new StringBuilder();
+            report.append("=== 个人健康档案报告 ===\n\n");
+            report.append("基本信息：\n");
+            report.append(String.format("姓名：%s\n", currentProfile.getName()));
+            report.append(String.format("年龄：%d岁\n", currentProfile.getAge()));
+            report.append(String.format("性别：%s\n", currentProfile.getGender()));
+            report.append(String.format("身高：%.1fcm\n", currentProfile.getHeight()));
+            report.append(String.format("体重：%.1fkg\n", currentProfile.getWeight()));
+            report.append("\n健康指标：\n");
+            report.append(String.format("BMI：%.1f (%s)\n", currentProfile.calculateBMI(), currentProfile.getBMICategory()));
+            if (currentProfile.getTargetWeight() > 0) {
+                report.append(String.format("目标体重：%.1fkg\n", currentProfile.getTargetWeight()));
+                report.append(String.format("体重差值：%+.1fkg\n", currentProfile.getWeightDifference()));
+            }
+            report.append(String.format("健身目标：%s\n", currentProfile.getFitnessGoal()));
+            
+            JTextArea textArea = new JTextArea(report.toString());
+            textArea.setEditable(false);
+            textArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(400, 300));
+            
+            JOptionPane.showMessageDialog(this, scrollPane, "健康档案报告", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "请先完善并保存用户信息！", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+    
+    /**
+     * 更新状态标签
+     */
+    private void updateStatusLabels() {
+        LocalDate now = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        
+        if (currentProfile != null) {
+            lastUpdatedLabel.setText("最后更新: " + now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            if (currentProfile.getCreatedDate() != null) {
+                createdLabel.setText("创建: " + currentProfile.getCreatedDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            }
+        } else {
+            lastUpdatedLabel.setText("最后更新: --");
+            createdLabel.setText("创建: --");
+        }
+    }
+    
+    /**
+     * 获取当前用户档案
+     */
+    public UserProfile getCurrentProfile() {
+        return currentProfile;
+    }
+} 

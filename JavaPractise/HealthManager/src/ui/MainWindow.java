@@ -1,5 +1,6 @@
 package ui;
 
+import ui.panels.UserProfilePanel;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -18,10 +19,12 @@ import java.awt.event.KeyEvent;
  * 
  */
 public class MainWindow extends JFrame {
+    private static final long serialVersionUID = 1L;
     
     /**
      * 构造方法 - 初始化主窗口
      */
+    @SuppressWarnings("this-escape")
     public MainWindow() {
         initComponents();
     }
@@ -49,12 +52,12 @@ public class MainWindow extends JFrame {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("微软雅黑", Font.PLAIN, 14));
         
-        // 添加5个空的标签页
-        tabbedPane.addTab("用户档案", createEmptyPanel("个人基本信息", "用户档案功能开发中..."));
-        tabbedPane.addTab("每日记录", createEmptyPanel("每日健康记录", "每日记录功能开发中..."));
-        tabbedPane.addTab("运动计划", createEmptyPanel("个人运动计划", "运动计划功能开发中..."));
-        tabbedPane.addTab("饮食管理", createEmptyPanel("饮食管理记录", "饮食管理功能开发中..."));
-        tabbedPane.addTab("数据分析", createEmptyPanel("健康数据分析", "数据分析功能开发中..."));
+        // 添加标签页
+        tabbedPane.addTab("用户档案", new UserProfilePanel());  // 使用实际的用户档案面板
+        tabbedPane.addTab("每日记录", createEmptyPanel("每日记录功能开发中..."));
+        tabbedPane.addTab("运动计划", createEmptyPanel("运动计划功能开发中..."));
+        tabbedPane.addTab("饮食管理", createEmptyPanel("饮食管理功能开发中..."));
+        tabbedPane.addTab("数据分析", createEmptyPanel("数据分析功能开发中..."));
         
         // 将选项卡面板添加到窗口
         add(tabbedPane);
@@ -77,17 +80,27 @@ public class MainWindow extends JFrame {
         JMenuItem saveItem = new JMenuItem("保存数据", KeyEvent.VK_S);
         saveItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
         saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
-        saveItem.addActionListener(e -> JOptionPane.showMessageDialog(
-            this, 
-            "数据保存功能将在第三阶段实现", 
-            "提示", 
-            JOptionPane.INFORMATION_MESSAGE
-        ));
+        saveItem.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(
+                    MainWindow.this, 
+                    "数据保存功能将在第三阶段实现", 
+                    "提示", 
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+        });
         
         JMenuItem exitItem = new JMenuItem("退出", KeyEvent.VK_X);
         exitItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
-        exitItem.addActionListener(e -> System.exit(0));
+        exitItem.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
         
         fileMenu.add(saveItem);
         fileMenu.addSeparator();
@@ -101,18 +114,23 @@ public class MainWindow extends JFrame {
         // 添加帮助菜单项
         JMenuItem aboutItem = new JMenuItem("关于", KeyEvent.VK_A);
         aboutItem.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        aboutItem.addActionListener(e -> JOptionPane.showMessageDialog(
-            this,
-            "个人健康管理器 v1.0\n\n" +
-            "这是一个基于Java Swing开发的健康管理应用程序，\n" +
-            "旨在帮助用户管理个人健康数据，制定运动计划，\n" +
-            "跟踪饮食情况，并提供数据分析功能。\n\n" +
-            "开发目的：Java GUI编程学习项目\n" +
-            "开发框架：Java Swing\n\n" +
-            "© 2025 个人健康管理器 - 学习项目",
-            "关于个人健康管理器",
-            JOptionPane.INFORMATION_MESSAGE
-        ));
+        aboutItem.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(
+                    MainWindow.this,
+                    "个人健康管理器 v1.0\n\n" +
+                    "这是一个基于Java Swing开发的健康管理应用程序，\n" +
+                    "旨在帮助用户管理个人健康数据，制定运动计划，\n" +
+                    "跟踪饮食情况，并提供数据分析功能。\n\n" +
+                    "开发目的：Java GUI编程学习项目\n" +
+                    "开发框架：Java Swing\n\n" +
+                    "© 2025 个人健康管理器 - 学习项目",
+                    "关于个人健康管理器",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+        });
         
         helpMenu.add(aboutItem);
         
@@ -126,11 +144,10 @@ public class MainWindow extends JFrame {
     /**
      * 创建空面板
      * 
-     * @param title 面板标题
      * @param message 提示信息
      * @return 创建好的面板
      */
-    private JPanel createEmptyPanel(String title, String message) {
+    private JPanel createEmptyPanel(String message) {
         // 创建面板，使用边界布局
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
@@ -162,9 +179,12 @@ public class MainWindow extends JFrame {
         }
         
         // 在事件调度线程中启动程序
-        SwingUtilities.invokeLater(() -> {
-            MainWindow window = new MainWindow();
-            window.setVisible(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                MainWindow window = new MainWindow();
+                window.setVisible(true);
+            }
         });
     }
 } 
