@@ -74,8 +74,8 @@ public class UserProfilePanel extends JPanel {
         // 基本信息组件
         nameField = new JTextField(15);
         ageSpinner = new JSpinner(new SpinnerNumberModel(25, UserProfile.MIN_AGE, UserProfile.MAX_AGE, 1));
-        maleRadio = new JRadioButton("男", true);
-        femaleRadio = new JRadioButton("女");
+        maleRadio = new JRadioButton("Male", true);
+        femaleRadio = new JRadioButton("Female");
         ButtonGroup genderGroup = new ButtonGroup();
         genderGroup.add(maleRadio);
         genderGroup.add(femaleRadio);
@@ -85,8 +85,8 @@ public class UserProfilePanel extends JPanel {
         heightField = new JTextField(8);
         weightField = new JTextField(8);
         bmiLabel = new JLabel("BMI: --");
-        categoryLabel = new JLabel("健康状态: --");
-        idealWeightLabel = new JLabel("理想体重: --");
+        categoryLabel = new JLabel("Health Status: --");
+        idealWeightLabel = new JLabel("Ideal Weight: --");
         
         // 健康目标组件
         targetWeightField = new JTextField(8);
@@ -110,10 +110,10 @@ public class UserProfilePanel extends JPanel {
         chronicDiseaseBox = new JCheckBox("慢性疾病");
         
         // 操作按钮
-        saveButton = new JButton("💾 保存信息");
-        calculateButton = new JButton("🔄 重新计算");
-        clearButton = new JButton("🗑️ 清空");
-        reportButton = new JButton("📊 查看报告");
+        saveButton = new JButton("保存信息");
+        calculateButton = new JButton("重新计算");
+        clearButton = new JButton("清空");
+        reportButton = new JButton("查看报告");
         
         // 状态信息
         lastUpdatedLabel = new JLabel("最后更新: --");
@@ -190,17 +190,16 @@ public class UserProfilePanel extends JPanel {
     private void setupLayout() {
         setLayout(new BorderLayout());
         
-        // 主面板
         JPanel mainPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
         
         // 标题
-        JLabel titleLabel = new JLabel("📋 个人档案", JLabel.CENTER);
-        titleLabel.setFont(getChineseFont(Font.BOLD, 16));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        mainPanel.add(titleLabel, gbc);
+        mainPanel.add(new JLabel("个人档案", JLabel.CENTER), gbc);
         
         // 基本信息面板
         gbc.gridy++; gbc.gridwidth = 2;
@@ -226,10 +225,10 @@ public class UserProfilePanel extends JPanel {
         gbc.gridy++; gbc.gridwidth = 2;
         mainPanel.add(createStatusPanel(), gbc);
         
-        // 添加滚动支持
         JScrollPane scrollPane = new JScrollPane(mainPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setPreferredSize(null);
         
         add(scrollPane, BorderLayout.CENTER);
     }
@@ -239,7 +238,7 @@ public class UserProfilePanel extends JPanel {
      */
     private JPanel createBasicInfoPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("👤 基本信息"));
+        panel.setBorder(new TitledBorder("基本信息"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(3, 3, 3, 3);
         
@@ -279,7 +278,7 @@ public class UserProfilePanel extends JPanel {
      */
     private JPanel createBodyDataPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("📏 身体数据"));
+        panel.setBorder(new TitledBorder("身体数据"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(3, 3, 3, 3);
         
@@ -319,7 +318,7 @@ public class UserProfilePanel extends JPanel {
      */
     private JPanel createHealthGoalPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("🎯 健康目标"));
+        panel.setBorder(new TitledBorder("健康目标"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(3, 3, 3, 3);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -366,7 +365,7 @@ public class UserProfilePanel extends JPanel {
      */
     private JPanel createHealthStatusPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("🏥 健康状况"));
+        panel.setBorder(new TitledBorder("健康状况"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(3, 3, 3, 3);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -388,29 +387,11 @@ public class UserProfilePanel extends JPanel {
     }
     
     /**
-     * 创建额外信息面板
-     */
-    private JPanel createExtraInfoPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("📝 额外信息"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(3, 3, 3, 3);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        
-        gbc.gridx = 0; gbc.gridy = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("健康备注:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
-        panel.add(new JScrollPane(healthNotesArea), gbc);
-        
-        return panel;
-    }
-    
-    /**
      * 创建操作按钮面板
      */
     private JPanel createButtonPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new TitledBorder("💾 数据管理"));
+        panel.setBorder(new TitledBorder("数据管理"));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         
@@ -637,8 +618,8 @@ public class UserProfilePanel extends JPanel {
                 } else {
                     // 清空BMI显示
                     bmiLabel.setText("BMI: --");
-                    categoryLabel.setText("健康状态: --");
-                    idealWeightLabel.setText("理想体重: --");
+                    categoryLabel.setText("Health Status: --");
+                    idealWeightLabel.setText("Ideal Weight: --");
                 }
             }
         } catch (NumberFormatException e) {
@@ -664,7 +645,7 @@ public class UserProfilePanel extends JPanel {
             field.setToolTipText(result.getMessage());
         } else {
             field.setBackground(new Color(255, 220, 220));
-            field.setToolTipText("❌ " + result.getMessage());
+            field.setToolTipText("错误: " + result.getMessage());
         }
     }
     
@@ -679,10 +660,10 @@ public class UserProfilePanel extends JPanel {
      * 获取BMI分类
      */
     private String getBMICategory(double bmi) {
-        if (bmi < 18.5) return "🔵 偏瘦";
-        if (bmi < 24.0) return "🟢 正常";
-        if (bmi < 28.0) return "🟡 超重";
-        return "🔴 肥胖";
+        if (bmi < 18.5) return "偏瘦";
+        if (bmi < 24.0) return "正常";
+        if (bmi < 28.0) return "超重";
+        return "肥胖";
     }
     
     /**
@@ -718,7 +699,7 @@ public class UserProfilePanel extends JPanel {
                     
                     double diff = currentWeight - targetWeight;
                     if (Math.abs(diff) < 0.5) {
-                        progressLabel.setText("🎉 目标达成！");
+                        progressLabel.setText("目标达成！");
                         progressLabel.setForeground(Color.GREEN);
                     } else {
                         String direction = diff > 0 ? "减重" : "增重";
@@ -819,10 +800,10 @@ public class UserProfilePanel extends JPanel {
                     updateStatusLabels();
                     
                     // 显示详细的保存成功信息
-                    String successMessage = "用户信息保存成功！\n\n" +
-                                          "✅ 基本信息已验证通过\n" +
-                                          "✅ 所有数值都在合理范围内\n" +
-                                          "✅ 数据格式正确";
+                    String successMessage = "成功: 用户信息保存成功！\n\n" +
+                                          "基本信息已验证通过\n" +
+                                          "所有数值都在合理范围内\n" +
+                                          "数据格式正确";
                     
                     if (profile.getHeight() > 0 && profile.getWeight() > 0) {
                         successMessage += String.format("\n\n您的BMI指数：%.1f (%s)", 
@@ -844,7 +825,7 @@ public class UserProfilePanel extends JPanel {
             } else {
                 // 显示具体的验证错误信息
                 JOptionPane.showMessageDialog(this, 
-                    "数据验证失败：\n\n❌ " + validationResult.getMessage() + 
+                    "数据验证失败：\n\n错误: " + validationResult.getMessage() + 
                     "\n\n请检查并修正输入的数据。", 
                     "数据验证错误", JOptionPane.WARNING_MESSAGE);
             }
@@ -1011,8 +992,8 @@ public class UserProfilePanel extends JPanel {
             }
             
             bmiLabel.setText("BMI: --");
-            categoryLabel.setText("健康状态: --");
-            idealWeightLabel.setText("理想体重: --");
+            categoryLabel.setText("Health Status: --");
+            idealWeightLabel.setText("Ideal Weight: --");
             progressBar.setValue(0);
             progressLabel.setText("进度: 0%");
             

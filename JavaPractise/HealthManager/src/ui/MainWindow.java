@@ -7,22 +7,22 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 
 /**
- * 主窗口类 - 程序的图形界面
+ * Main window class - GUI
  * 
- * 这个类负责创建和管理应用程序的主窗口。在第一阶段Day 2中，
- * 主要功能是创建一个包含5个空标签页的窗口界面：
- * 1. 用户档案 - 用于显示和管理用户的基本信息
- * 2. 每日记录 - 用于记录用户的每日健康数据
- * 3. 运动计划 - 用于制定和跟踪运动计划
- * 4. 饮食管理 - 用于记录和管理饮食情况
- * 5. 数据分析 - 用于分析和展示健康数据统计
+ * This class is responsible for creating and managing the main window of the application. In Day 2,
+ * the main function is to create a window interface with 5 empty tabs:
+ * 1. User Profile - for displaying and managing user's basic info
+ * 2. Daily Record - for recording user's daily health data
+ * 3. Exercise Plan - for making and tracking exercise plans
+ * 4. Diet Management - for recording and managing diet
+ * 5. Data Analysis - for analyzing and displaying health data statistics
  * 
  */
 public class MainWindow extends JFrame {
     private static final long serialVersionUID = 1L;
     
     /**
-     * 构造方法 - 初始化主窗口
+     * Constructor - Initialize main window
      */
     @SuppressWarnings("this-escape")
     public MainWindow() {
@@ -30,15 +30,15 @@ public class MainWindow extends JFrame {
     }
     
     /**
-     * 获取支持中文的字体
-     * 按优先级尝试不同的中文字体，确保中文能正确显示
+     * Get Chinese font
+     * Try different Chinese fonts in priority order to ensure Chinese characters can be displayed correctly
      * 
-     * @param style 字体样式 (Font.PLAIN, Font.BOLD, Font.ITALIC)
-     * @param size 字体大小
-     * @return 支持中文的字体
+     * @param style Font style (Font.PLAIN, Font.BOLD, Font.ITALIC)
+     * @param size Font size
+     * @return Chinese font
      */
     private Font getChineseFont(int style, int size) {
-        // 按优先级尝试不同的中文字体
+        // Try different Chinese fonts in priority order
         String[] fontNames = {
             "微软雅黑", "Microsoft YaHei", "SimSun", "宋体", 
             "SimHei", "黑体", "KaiTi", "楷体", "FangSong", "仿宋"
@@ -51,62 +51,62 @@ public class MainWindow extends JFrame {
                     return font;
                 }
             } catch (Exception e) {
-                // 忽略字体创建失败的情况，继续尝试下一个
+                // Ignore font creation failure and continue to the next
             }
         }
         
-        // 如果所有中文字体都不可用，使用系统默认字体
+        // If all Chinese fonts are unavailable, use the system default font
         return new Font(Font.SANS_SERIF, style, size);
     }
     
     /**
-     * 初始化窗口组件
+     * Initialize window components
      * 
-     * 该方法负责：
-     * 1. 设置窗口的基本属性（标题、大小、关闭行为）
-     * 2. 创建菜单栏
-     * 3. 创建选项卡面板
-     * 4. 添加5个空的标签页
+     * This method is responsible for:
+     * 1. Setting window basic properties (title, size, close behavior)
+     * 2. Creating menu bar
+     * 3. Creating tabbed panel
+     * 4. Adding 5 empty tabs
      */
     private void initComponents() {
-        // 设置窗口属性
-        setTitle("个人健康管理器");
+        // Set window properties
+        setTitle("Personal Health Manager");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
-        setLocationRelativeTo(null);  // 窗口居中显示
+        setLocationRelativeTo(null);  // Window center display
         
-        // 创建菜单栏
+        // Create menu bar
         setJMenuBar(createMenuBar());
         
-        // 创建选项卡面板并设置字体
+        // Create tabbed panel and set font
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(getChineseFont(Font.PLAIN, 14));
         
-        // 添加标签页
-        tabbedPane.addTab("用户档案", new UserProfilePanel());  // 使用实际的用户档案面板
+        // Add tabs
+        tabbedPane.addTab("用户档案", new UserProfilePanel());
         tabbedPane.addTab("每日记录", createEmptyPanel("每日记录功能开发中..."));
         tabbedPane.addTab("运动计划", createEmptyPanel("运动计划功能开发中..."));
         tabbedPane.addTab("饮食管理", createEmptyPanel("饮食管理功能开发中..."));
         tabbedPane.addTab("数据分析", createEmptyPanel("数据分析功能开发中..."));
         
-        // 将选项卡面板添加到窗口
+        // Add tabbed panel to window
         add(tabbedPane);
     }
     
     /**
-     * 创建菜单栏
+     * Create menu bar
      * 
-     * @return 配置好的菜单栏
+     * @return Configured menu bar
      */
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         
-        // 创建文件菜单
+        // Create file menu
         JMenu fileMenu = new JMenu("文件");
         fileMenu.setFont(getChineseFont(Font.PLAIN, 14));
         fileMenu.setMnemonic(KeyEvent.VK_F);
         
-        // 添加文件菜单项
+        // Add file menu items
         JMenuItem saveItem = new JMenuItem("保存数据", KeyEvent.VK_S);
         saveItem.setFont(getChineseFont(Font.PLAIN, 14));
         saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
@@ -136,12 +136,12 @@ public class MainWindow extends JFrame {
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
         
-        // 创建帮助菜单
+        // Create help menu
         JMenu helpMenu = new JMenu("帮助");
         helpMenu.setFont(getChineseFont(Font.PLAIN, 14));
         helpMenu.setMnemonic(KeyEvent.VK_H);
         
-        // 添加帮助菜单项
+        // Add help menu items
         JMenuItem aboutItem = new JMenuItem("关于", KeyEvent.VK_A);
         aboutItem.setFont(getChineseFont(Font.PLAIN, 14));
         aboutItem.addActionListener(new java.awt.event.ActionListener() {
@@ -150,9 +150,9 @@ public class MainWindow extends JFrame {
                 JOptionPane.showMessageDialog(
                     MainWindow.this,
                     "个人健康管理器 v1.0\n\n" +
-                    "这是一个基于Java Swing开发的健康管理应用程序，\n" +
+                    "本程序是基于Java Swing开发的健康管理应用，\n" +
                     "旨在帮助用户管理个人健康数据，制定运动计划，\n" +
-                    "跟踪饮食情况，并提供数据分析功能。\n\n" +
+                    "记录饮食，并提供数据分析功能。\n\n" +
                     "开发目的：Java GUI编程学习项目\n" +
                     "开发框架：Java Swing\n\n" +
                     "© 2025 个人健康管理器 - 学习项目",
@@ -164,7 +164,7 @@ public class MainWindow extends JFrame {
         
         helpMenu.add(aboutItem);
         
-        // 将菜单添加到菜单栏
+        // Add menu to menu bar
         menuBar.add(fileMenu);
         menuBar.add(helpMenu);
         
@@ -172,43 +172,43 @@ public class MainWindow extends JFrame {
     }
     
     /**
-     * 创建空面板
+     * Create empty panel
      * 
-     * @param message 提示信息
-     * @return 创建好的面板
+     * @param message Prompt information
+     * @return Created panel
      */
     private JPanel createEmptyPanel(String message) {
-        // 创建面板，使用边界布局
+        // Create panel, using BorderLayout
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         
-        // 创建提示信息标签
+        // Create prompt information label
         JLabel messageLabel = new JLabel(message);
         messageLabel.setFont(getChineseFont(Font.PLAIN, 14));
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         messageLabel.setForeground(Color.GRAY);
         messageLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         
-        // 将标签添加到面板顶部
+        // Add label to panel top
         panel.add(messageLabel, BorderLayout.NORTH);
         
         return panel;
     }
     
     /**
-     * 程序入口方法
+     * Program entry method
      * 
-     * @param args 命令行参数（当前未使用）
+     * @param args Command line parameters (currently not used)
      */
     public static void main(String[] args) {
-        // 设置界面外观为系统默认外观
+        // Set interface appearance to system default appearance
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
         
-        // 在事件调度线程中启动程序
+        // Start program in event dispatch thread
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {

@@ -1,5 +1,4 @@
 import ui.MainWindow;
-
 /**
  * 个人健康管理器 - 主程序入口类
  * 
