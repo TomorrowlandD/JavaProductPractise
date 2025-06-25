@@ -74,8 +74,8 @@ public class UserProfilePanel extends JPanel {
         // 基本信息组件
         nameField = new JTextField(15);
         ageSpinner = new JSpinner(new SpinnerNumberModel(25, UserProfile.MIN_AGE, UserProfile.MAX_AGE, 1));
-        maleRadio = new JRadioButton("Male", true);
-        femaleRadio = new JRadioButton("Female");
+        maleRadio = new JRadioButton("男", true);
+        femaleRadio = new JRadioButton("女");
         ButtonGroup genderGroup = new ButtonGroup();
         genderGroup.add(maleRadio);
         genderGroup.add(femaleRadio);
@@ -85,8 +85,8 @@ public class UserProfilePanel extends JPanel {
         heightField = new JTextField(8);
         weightField = new JTextField(8);
         bmiLabel = new JLabel("BMI: --");
-        categoryLabel = new JLabel("Health Status: --");
-        idealWeightLabel = new JLabel("Ideal Weight: --");
+        categoryLabel = new JLabel("健康状态: --");
+        idealWeightLabel = new JLabel("理想体重: --");
         
         // 健康目标组件
         targetWeightField = new JTextField(8);
