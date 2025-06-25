@@ -106,22 +106,6 @@ public class MainWindow extends JFrame {
         fileMenu.setFont(getChineseFont(Font.PLAIN, 14));
         fileMenu.setMnemonic(KeyEvent.VK_F);
         
-        // 添加文件菜单项
-        JMenuItem saveItem = new JMenuItem("保存数据", KeyEvent.VK_S);
-        saveItem.setFont(getChineseFont(Font.PLAIN, 14));
-        saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
-        saveItem.addActionListener(new java.awt.event.ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(
-                    MainWindow.this, 
-                    "数据保存功能将在第三阶段实现", 
-                    "提示", 
-                    JOptionPane.INFORMATION_MESSAGE
-                );
-            }
-        });
-        
         JMenuItem exitItem = new JMenuItem("退出", KeyEvent.VK_X);
         exitItem.setFont(getChineseFont(Font.PLAIN, 14));
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
@@ -132,7 +116,6 @@ public class MainWindow extends JFrame {
             }
         });
         
-        fileMenu.add(saveItem);
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
         
