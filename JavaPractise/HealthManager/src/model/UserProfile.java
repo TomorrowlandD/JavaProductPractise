@@ -445,6 +445,6 @@ public class UserProfile implements Serializable {
     
     @Override
     public String toString() {
-        return this.name;
+        return name != null ? name : "未知用户";
     }
 } 

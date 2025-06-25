@@ -1,4 +1,5 @@
 import ui.MainWindow;
+import service.DatabaseManager;
 /**
  * 个人健康管理器 - 主程序入口类
  * 
@@ -19,6 +20,8 @@ public class Main {
      * @param args 命令行参数（当前未使用）
      */
     public static void main(String[] args) {
+        // 启动主窗口前初始化数据库，自动建表
+        DatabaseManager.initializeDatabase();
         // 启动主窗口
         MainWindow.main(args);
     }

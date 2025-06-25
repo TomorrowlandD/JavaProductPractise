@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.JOptionPane;
 import java.util.ArrayList;
 import java.util.List;
+import model.DailyRecord;
 
 /**
  * 数据库管理类
@@ -75,11 +76,27 @@ public class DatabaseManager {
             "is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活'" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户档案表'";
         
+        String createDailyRecordTableSQL = "CREATE TABLE IF NOT EXISTS daily_record (" +
+            "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '记录ID'," +
+            "user_id INT COMMENT '用户ID'," +
+            "date DATE NOT NULL COMMENT '日期'," +
+            "weight DECIMAL(5,2) COMMENT '体重(kg)'," +
+            "exercise VARCHAR(100) COMMENT '运动内容'," +
+            "exercise_duration DECIMAL(4,2) COMMENT '运动时长(小时)'," +
+            "sleep_duration DECIMAL(4,2) COMMENT '睡眠时长(小时)'," +
+            "mood VARCHAR(20) COMMENT '心情'," +
+            "note TEXT COMMENT '备注'," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日健康记录表'";
+        
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
             stmt.executeUpdate(createTableSQL);
             System.out.println("数据库表初始化成功");
+            stmt.executeUpdate(createDailyRecordTableSQL);
+            System.out.println("每日记录表初始化成功");
             
         } catch (SQLException e) {
             System.err.println("数据库表初始化失败: " + e.getMessage());
@@ -147,26 +164,22 @@ public class DatabaseManager {
         String updateSQL = "UPDATE user_profile " +
                           "SET name=?, age=?, gender=?, height=?, weight=?, target_weight=?, " +
                           "fitness_goal=?, health_status=?, health_notes=?, phone=? " +
-                          "WHERE is_active = TRUE LIMIT 1";
-        
+                          "WHERE id = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
-            
             setProfileParameters(pstmt, profile);
-            
+            pstmt.setInt(11, profile.getId());
             int result = pstmt.executeUpdate();
             if (result > 0) {
                 System.out.println("用户档案更新成功");
                 return true;
             }
-            
         } catch (SQLException e) {
             System.err.println("用户档案更新失败: " + e.getMessage());
             JOptionPane.showMessageDialog(null, 
                 "更新用户档案失败:\n" + e.getMessage(), 
                 "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
-        
         return false;
     }
     
@@ -365,6 +378,101 @@ public class DatabaseManager {
      */
     public static boolean deleteUserProfileById(int id) {
         String sql = "DELETE FROM user_profile WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * 保存每日记录到数据库
+     * @param record DailyRecord对象
+     * @return 保存是否成功
+     */
+    public static boolean saveDailyRecord(model.DailyRecord record) {
+        if (record == null) return false;
+        String insertSQL = "INSERT INTO daily_record (user_name, date, weight, exercise, exercise_duration, sleep_duration, mood, note) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+            pstmt.setString(1, record.getUserName());
+            pstmt.setDate(2, java.sql.Date.valueOf(record.getDate()));
+            pstmt.setDouble(3, record.getWeight());
+            pstmt.setString(4, record.getExercise());
+            pstmt.setDouble(5, record.getExerciseDuration());
+            pstmt.setDouble(6, record.getSleepDuration());
+            pstmt.setString(7, record.getMood());
+            pstmt.setString(8, record.getNote());
+            int result = pstmt.executeUpdate();
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("每日记录保存失败: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "保存每日记录失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+    
+    /**
+     * 获取所有每日记录
+     */
+    public static List<DailyRecord> getAllDailyRecords() {
+        List<DailyRecord> records = new ArrayList<>();
+        String sql = "SELECT * FROM daily_record ORDER BY date DESC, id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                DailyRecord record = new DailyRecord();
+                record.setId(rs.getInt("id"));
+                record.setUserName(rs.getString("user_name"));
+                record.setDate(rs.getDate("date").toLocalDate());
+                record.setWeight(rs.getDouble("weight"));
+                record.setExercise(rs.getString("exercise"));
+                record.setExerciseDuration(rs.getDouble("exercise_duration"));
+                record.setSleepDuration(rs.getDouble("sleep_duration"));
+                record.setMood(rs.getString("mood"));
+                record.setNote(rs.getString("note"));
+                records.add(record);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return records;
+    }
+
+    /**
+     * 更新每日记录
+     */
+    public static boolean updateDailyRecord(model.DailyRecord record) {
+        if (record == null || record.getId() == 0) return false;
+        String sql = "UPDATE daily_record SET user_name=?, date=?, weight=?, exercise=?, exercise_duration=?, sleep_duration=?, mood=?, note=? WHERE id=?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, record.getUserName());
+            pstmt.setDate(2, java.sql.Date.valueOf(record.getDate()));
+            pstmt.setDouble(3, record.getWeight());
+            pstmt.setString(4, record.getExercise());
+            pstmt.setDouble(5, record.getExerciseDuration());
+            pstmt.setDouble(6, record.getSleepDuration());
+            pstmt.setString(7, record.getMood());
+            pstmt.setString(8, record.getNote());
+            pstmt.setInt(9, record.getId());
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 根据ID删除每日记录
+     */
+    public static boolean deleteDailyRecordById(int id) {
+        String sql = "DELETE FROM daily_record WHERE id = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);

@@ -488,6 +488,7 @@ public class UserProfilePanel extends JPanel {
         });
         addButton.addActionListener(e -> {
             userComboBox.setSelectedItem(null);
+            clearAll(false);
         });
         deleteButton.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
@@ -819,6 +820,19 @@ public class UserProfilePanel extends JPanel {
                 nameField.requestFocus();
                 return;
             }
+            // 新增：校验用户名唯一性
+            java.util.List<UserProfile> allUsers = service.DatabaseManager.getAllUserProfiles();
+            for (UserProfile user : allUsers) {
+                // 新增用户或修改为新名字时，不能与其他用户重名
+                if (user.getName().equals(name)) {
+                    // 如果是编辑已有用户，允许和自己重名
+                    if (userComboBox.getSelectedItem() == null || ((UserProfile)userComboBox.getSelectedItem()).getId() != user.getId()) {
+                        JOptionPane.showMessageDialog(this, "用户名已存在，请更换姓名！", "提示", JOptionPane.WARNING_MESSAGE);
+                        nameField.requestFocus();
+                        return;
+                    }
+                }
+            }
             // 验证电话
             String phone = phoneField.getText().trim();
             UserProfile.ValidationResult phoneResult = UserProfile.validatePhone(phone);
@@ -837,11 +851,13 @@ public class UserProfilePanel extends JPanel {
                     currentProfile = profile;
                     updateStatusLabels();
                     // 新增或更新数据库
-                    if (userComboBox.getSelectedItem() == null) {
-                        service.DatabaseManager.insertUserProfile(profile);
-                    } else {
+                    if (userComboBox.getSelectedItem() instanceof UserProfile) {
+                        // 编辑：更新已有用户
                         profile.setId(((UserProfile) userComboBox.getSelectedItem()).getId());
                         service.DatabaseManager.updateUserProfile(profile);
+                    } else {
+                        // 新增：插入新用户
+                        service.DatabaseManager.insertUserProfile(profile);
                     }
                     refreshUserComboBox();
                     // 显示详细的保存成功信息
