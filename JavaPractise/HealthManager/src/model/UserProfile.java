@@ -38,6 +38,8 @@ public class UserProfile implements Serializable {
     private LocalDate createdDate;    // 创建日期
     private LocalDate lastUpdated;    // 最后更新日期
     
+    private int id;
+    
     // 默认构造方法
     public UserProfile() {
         this.createdDate = LocalDate.now();
@@ -168,8 +170,24 @@ public class UserProfile implements Serializable {
         return createdDate;
     }
     
+    public void setCreatedDate(LocalDate createdDate) {
+        this.createdDate = createdDate;
+    }
+    
     public LocalDate getLastUpdated() {
         return lastUpdated;
+    }
+    
+    public void setUpdatedDate(LocalDate updatedDate) {
+        this.lastUpdated = updatedDate;
+    }
+    
+    public int getId() {
+        return id;
+    }
+    
+    public void setId(int id) {
+        this.id = id;
     }
     
     // 工具方法
@@ -427,7 +445,6 @@ public class UserProfile implements Serializable {
     
     @Override
     public String toString() {
-        return String.format("UserProfile{姓名='%s', 年龄=%d, 性别='%s', 身高=%.1fcm, 体重=%.1fkg, BMI=%.1f(%s)}",
-                name, age, gender, height, weight, calculateBMI(), getBMICategory());
+        return this.name;
     }
 } 

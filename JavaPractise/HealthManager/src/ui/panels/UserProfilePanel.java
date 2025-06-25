@@ -59,12 +59,19 @@ public class UserProfilePanel extends JPanel {
     // 当前用户档案对象
     private UserProfile currentProfile;
     
+    // 1. 添加多用户相关字段
+    private JComboBox<UserProfile> userComboBox;
+    private java.util.List<UserProfile> userList;
+    private JButton addButton, deleteButton;
+    
     @SuppressWarnings("this-escape")
     public UserProfilePanel() {
         initializeComponents();
         setupLayout();
         setupEventHandlers();
         setupDefaults();
+        // 初始化用户下拉框
+        refreshUserComboBox();
     }
     
     /**
@@ -118,6 +125,10 @@ public class UserProfilePanel extends JPanel {
         // 状态信息
         lastUpdatedLabel = new JLabel("最后更新: --");
         createdLabel = new JLabel("创建: --");
+        
+        // 1. 添加多用户相关字段
+        addButton = new JButton("新增用户");
+        deleteButton = new JButton("删除用户");
         
         // 设置组件样式
         setupComponentStyles();
@@ -189,6 +200,13 @@ public class UserProfilePanel extends JPanel {
      */
     private void setupLayout() {
         setLayout(new BorderLayout());
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.add(new JLabel("选择用户:"));
+        userComboBox = new JComboBox<>();
+        topPanel.add(userComboBox);
+        topPanel.add(addButton);
+        topPanel.add(deleteButton);
+        add(topPanel, BorderLayout.NORTH);
         
         JPanel mainPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -456,8 +474,32 @@ public class UserProfilePanel extends JPanel {
         // 按钮事件
         saveButton.addActionListener(e -> saveUserProfile());
         calculateButton.addActionListener(e -> calculateAll());
-        clearButton.addActionListener(e -> clearAll());
+        clearButton.addActionListener(e -> clearAll(true));
         reportButton.addActionListener(e -> showReport());
+        
+        // 1. 添加多用户相关事件
+        userComboBox.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            if (selected != null) {
+                setProfileToUI(selected);
+            } else {
+                clearAll(false);
+            }
+        });
+        addButton.addActionListener(e -> {
+            userComboBox.setSelectedItem(null);
+        });
+        deleteButton.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            if (selected != null) {
+                int result = JOptionPane.showConfirmDialog(this, "确定要删除该用户吗？", "确认删除", JOptionPane.YES_NO_OPTION);
+                if (result == JOptionPane.YES_OPTION) {
+                    service.DatabaseManager.deleteUserProfileById(selected.getId());
+                    refreshUserComboBox();
+                    clearAll(false);
+                }
+            }
+        });
     }
     
     /**
@@ -618,8 +660,8 @@ public class UserProfilePanel extends JPanel {
                 } else {
                     // 清空BMI显示
                     bmiLabel.setText("BMI: --");
-                    categoryLabel.setText("Health Status: --");
-                    idealWeightLabel.setText("Ideal Weight: --");
+                    categoryLabel.setText("健康状态: --");
+                    idealWeightLabel.setText("理想体重: --");
                 }
             }
         } catch (NumberFormatException e) {
@@ -768,7 +810,6 @@ public class UserProfilePanel extends JPanel {
                                             "数据验证错误", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            
             // 验证姓名
             String name = nameField.getText().trim();
             UserProfile.ValidationResult nameResult = UserProfile.validateName(name);
@@ -778,7 +819,6 @@ public class UserProfilePanel extends JPanel {
                 nameField.requestFocus();
                 return;
             }
-            
             // 验证电话
             String phone = phoneField.getText().trim();
             UserProfile.ValidationResult phoneResult = UserProfile.validatePhone(phone);
@@ -788,9 +828,7 @@ public class UserProfilePanel extends JPanel {
                 phoneField.requestFocus();
                 return;
             }
-            
             UserProfile profile = getProfileFromUI();
-            
             // 使用完整的数据验证
             UserProfile.ValidationResult validationResult = profile.validateProfile();
             if (validationResult.isValid()) {
@@ -798,19 +836,24 @@ public class UserProfilePanel extends JPanel {
                 if (profile.isProfileComplete()) {
                     currentProfile = profile;
                     updateStatusLabels();
-                    
+                    // 新增或更新数据库
+                    if (userComboBox.getSelectedItem() == null) {
+                        service.DatabaseManager.insertUserProfile(profile);
+                    } else {
+                        profile.setId(((UserProfile) userComboBox.getSelectedItem()).getId());
+                        service.DatabaseManager.updateUserProfile(profile);
+                    }
+                    refreshUserComboBox();
                     // 显示详细的保存成功信息
                     String successMessage = "成功: 用户信息保存成功！\n\n" +
                                           "基本信息已验证通过\n" +
                                           "所有数值都在合理范围内\n" +
                                           "数据格式正确";
-                    
                     if (profile.getHeight() > 0 && profile.getWeight() > 0) {
                         successMessage += String.format("\n\n您的BMI指数：%.1f (%s)", 
                                                        profile.calculateBMI(), 
                                                        profile.getBMICategory());
                     }
-                    
                     JOptionPane.showMessageDialog(this, successMessage, "保存成功", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, 
@@ -966,44 +1009,43 @@ public class UserProfilePanel extends JPanel {
      * 清空所有输入
      */
     private void clearAll() {
-        int result = JOptionPane.showConfirmDialog(this, "确定要清空所有信息吗？", "确认清空", JOptionPane.YES_NO_OPTION);
-        if (result == JOptionPane.YES_OPTION) {
-            nameField.setText("");
-            ageSpinner.setValue(25);
-            maleRadio.setSelected(true);
-            phoneField.setText("");
-            heightField.setText("");
-            weightField.setText("");
-            targetWeightField.setText("");
-            fitnessGoalBox.setSelectedIndex(0);
-            healthNotesArea.setText("无特殊疾病史");
-            
-            // 重置健康状况复选框
-            noHealthIssuesBox.setSelected(true);
-            hypertensionBox.setSelected(false);
-            diabetesBox.setSelected(false);
-            heartDiseaseBox.setSelected(false);
-            jointProblemsBox.setSelected(false);
-            allergiesBox.setSelected(false);
-            chronicDiseaseBox.setSelected(false);
-            // 触发逻辑处理来禁用其他选项
-            if (noHealthIssuesBox.getActionListeners().length > 0) {
-                noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
+        clearAll(true);
+    }
+    private void clearAll(boolean confirm) {
+        if (confirm) {
+            int result = JOptionPane.showConfirmDialog(this, "确定要清空所有信息吗？", "确认清空", JOptionPane.YES_NO_OPTION);
+            if (result != JOptionPane.YES_OPTION) {
+                return;
             }
-            
-            bmiLabel.setText("BMI: --");
-            categoryLabel.setText("Health Status: --");
-            idealWeightLabel.setText("Ideal Weight: --");
-            progressBar.setValue(0);
-            progressLabel.setText("进度: 0%");
-            
-            // 重置背景色
-            heightField.setBackground(Color.WHITE);
-            weightField.setBackground(Color.WHITE);
-            
-            currentProfile = null;
-            updateStatusLabels();
         }
+        nameField.setText("");
+        ageSpinner.setValue(25);
+        maleRadio.setSelected(true);
+        phoneField.setText("");
+        heightField.setText("");
+        weightField.setText("");
+        targetWeightField.setText("");
+        fitnessGoalBox.setSelectedIndex(0);
+        healthNotesArea.setText("无特殊疾病史");
+        noHealthIssuesBox.setSelected(true);
+        hypertensionBox.setSelected(false);
+        diabetesBox.setSelected(false);
+        heartDiseaseBox.setSelected(false);
+        jointProblemsBox.setSelected(false);
+        allergiesBox.setSelected(false);
+        chronicDiseaseBox.setSelected(false);
+        if (noHealthIssuesBox.getActionListeners().length > 0) {
+            noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
+        }
+        bmiLabel.setText("BMI: --");
+        categoryLabel.setText("健康状态: --");
+        idealWeightLabel.setText("理想体重: --");
+        progressBar.setValue(0);
+        progressLabel.setText("进度: 0%");
+        heightField.setBackground(Color.WHITE);
+        weightField.setBackground(Color.WHITE);
+        currentProfile = null;
+        updateStatusLabels();
     }
     
     /**
@@ -1062,5 +1104,13 @@ public class UserProfilePanel extends JPanel {
      */
     public UserProfile getCurrentProfile() {
         return currentProfile;
+    }
+    
+    /**
+     * 初始化用户下拉框
+     */
+    private void refreshUserComboBox() {
+        userList = service.DatabaseManager.getAllUserProfiles();
+        userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
     }
 } 
