@@ -332,7 +332,6 @@ public class ExercisePlanPanel extends JPanel {
                 dateField.requestFocus();
                 return;
             }
-            
             try {
                 LocalDate planDate = LocalDate.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                 plan.setPlanDate(planDate);
@@ -342,22 +341,25 @@ public class ExercisePlanPanel extends JPanel {
                 return;
             }
             
-            // 解析时长
+            // 解析时长（必填校验）
             String durationText = durationField.getText().trim();
-            if (!durationText.isEmpty()) {
-                try {
-                    double duration = Double.parseDouble(durationText);
-                    if (duration <= 0 || duration > 24) {
-                        JOptionPane.showMessageDialog(this, "运动时长必须在0-24小时之间", "提示", JOptionPane.WARNING_MESSAGE);
-                        durationField.requestFocus();
-                        return;
-                    }
-                    plan.setDuration(duration);
-                } catch (NumberFormatException e) {
-                    JOptionPane.showMessageDialog(this, "请输入有效的运动时长", "提示", JOptionPane.WARNING_MESSAGE);
+            if (durationText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "请输入总运动时长", "提示", JOptionPane.WARNING_MESSAGE);
+                durationField.requestFocus();
+                return;
+            }
+            try {
+                double duration = Double.parseDouble(durationText);
+                if (duration <= 0 || duration > 24) {
+                    JOptionPane.showMessageDialog(this, "运动时长必须在0-24小时之间", "提示", JOptionPane.WARNING_MESSAGE);
                     durationField.requestFocus();
                     return;
                 }
+                plan.setDuration(duration);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "请输入有效的运动时长", "提示", JOptionPane.WARNING_MESSAGE);
+                durationField.requestFocus();
+                return;
             }
             
             // 设置其他字段
