@@ -508,7 +508,7 @@ public class UserProfilePanel extends JPanel {
      */
     private void setupHealthStatusLogic() {
         // "无特殊疾病史"复选框的特殊逻辑
-        noHealthIssuesBox.addActionListener(e -> {
+        noHealthIssuesBox.addActionListener(_ -> {
             if (noHealthIssuesBox.isSelected()) {
                 // 选中"无特殊疾病史"时，取消其他所有选项并禁用
                 hypertensionBox.setSelected(false);
@@ -542,7 +542,7 @@ public class UserProfilePanel extends JPanel {
         };
         
         for (JCheckBox box : healthIssueBoxes) {
-            box.addActionListener(e -> {
+            box.addActionListener(_ -> {
                 if (box.isSelected()) {
                     // 选中任何健康问题时，自动取消"无特殊疾病史"
                     noHealthIssuesBox.setSelected(false);

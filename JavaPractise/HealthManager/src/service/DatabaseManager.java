@@ -55,7 +55,7 @@ public class DatabaseManager {
     
     /**
      * 初始化数据库表
-     * 创建user_profile表（如果不存在）
+     * 创建各种表(这样在别的电脑上也能运行)
      */
     public static void initializeDatabase() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS user_profile (" +
@@ -90,6 +90,21 @@ public class DatabaseManager {
             "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日健康记录表'";
         
+        String createExercisePlanTableSQL = "CREATE TABLE IF NOT EXISTS exercise_plan (" +
+            "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '计划ID'," +
+            "user_name VARCHAR(50) NOT NULL COMMENT '用户名'," +
+            "exercise_type VARCHAR(50) NOT NULL COMMENT '运动类型'," +
+            "plan_date DATE NOT NULL COMMENT '计划日期'," +
+            "duration DECIMAL(4,2) COMMENT '计划时长(小时)'," +
+            "intensity VARCHAR(20) COMMENT '运动强度(低/中/高)'," +
+            "is_completed BOOLEAN DEFAULT FALSE COMMENT '是否完成'," +
+            "actual_duration DECIMAL(4,2) COMMENT '实际完成时长(小时)'," +
+            "notes TEXT COMMENT '备注'," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+            "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运动计划表'";
+        
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
@@ -97,6 +112,8 @@ public class DatabaseManager {
             System.out.println("用户档案表检查完成");
             stmt.executeUpdate(createDailyRecordTableSQL);
             System.out.println("每日记录表检查完成");
+            stmt.executeUpdate(createExercisePlanTableSQL);
+            System.out.println("运动计划表检查完成");
             
         } catch (SQLException e) {
             System.err.println("数据库表初始化失败: " + e.getMessage());
@@ -524,6 +541,230 @@ public class DatabaseManager {
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // ==================== 运动计划相关操作 ====================
+    
+    /**
+     * 插入新的运动计划
+     */
+    public static boolean insertExercisePlan(model.ExercisePlan plan) {
+        String insertSQL = "INSERT INTO exercise_plan (user_name, exercise_type, plan_date, duration, intensity, is_completed, actual_duration, notes) " +
+                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS)) {
+            
+            setExercisePlanParameters(pstmt, plan);
+            
+            int result = pstmt.executeUpdate();
+            if (result > 0) {
+                // 获取生成的ID并设置到plan对象中
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        plan.setId(generatedKeys.getInt(1));
+                    }
+                }
+                System.out.println("运动计划插入成功，ID: " + plan.getId());
+                return true;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("运动计划插入失败: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, 
+                "保存运动计划失败:\n" + e.getMessage(), 
+                "数据库错误", JOptionPane.ERROR_MESSAGE);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 更新运动计划
+     */
+    public static boolean updateExercisePlan(model.ExercisePlan plan) {
+        String updateSQL = "UPDATE exercise_plan " +
+                          "SET user_name=?, exercise_type=?, plan_date=?, duration=?, intensity=?, " +
+                          "is_completed=?, actual_duration=?, notes=? " +
+                          "WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
+            setExercisePlanParameters(pstmt, plan);
+            pstmt.setInt(9, plan.getId());
+            int result = pstmt.executeUpdate();
+            if (result > 0) {
+                System.out.println("运动计划更新成功");
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("运动计划更新失败: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, 
+                "更新运动计划失败:\n" + e.getMessage(), 
+                "数据库错误", JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+    
+    /**
+     * 设置运动计划PreparedStatement的参数
+     */
+    private static void setExercisePlanParameters(PreparedStatement pstmt, model.ExercisePlan plan) throws SQLException {
+        pstmt.setString(1, plan.getUserName());
+        pstmt.setString(2, plan.getExerciseType());
+        pstmt.setDate(3, java.sql.Date.valueOf(plan.getPlanDate()));
+        
+        if (plan.getDuration() != null) {
+            pstmt.setDouble(4, plan.getDuration());
+        } else {
+            pstmt.setNull(4, Types.DECIMAL);
+        }
+        
+        pstmt.setString(5, plan.getIntensity());
+        pstmt.setBoolean(6, plan.isCompleted());
+        
+        if (plan.getActualDuration() != null) {
+            pstmt.setDouble(7, plan.getActualDuration());
+        } else {
+            pstmt.setNull(7, Types.DECIMAL);
+        }
+        
+        pstmt.setString(8, plan.getNotes());
+    }
+    
+    /**
+     * 获取所有运动计划
+     */
+    public static List<model.ExercisePlan> getAllExercisePlans() {
+        List<model.ExercisePlan> plans = new ArrayList<>();
+        String sql = "SELECT * FROM exercise_plan ORDER BY plan_date DESC, id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                model.ExercisePlan plan = new model.ExercisePlan();
+                plan.setId(rs.getInt("id"));
+                plan.setUserName(rs.getString("user_name"));
+                plan.setExerciseType(rs.getString("exercise_type"));
+                plan.setPlanDate(rs.getDate("plan_date").toLocalDate());
+                
+                double duration = rs.getDouble("duration");
+                if (!rs.wasNull()) {
+                    plan.setDuration(duration);
+                }
+                
+                plan.setIntensity(rs.getString("intensity"));
+                plan.setCompleted(rs.getBoolean("is_completed"));
+                
+                double actualDuration = rs.getDouble("actual_duration");
+                if (!rs.wasNull()) {
+                    plan.setActualDuration(actualDuration);
+                }
+                
+                plan.setNotes(rs.getString("notes"));
+                plan.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                plan.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+                
+                plans.add(plan);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return plans;
+    }
+    
+    /**
+     * 根据用户名获取运动计划
+     */
+    public static List<model.ExercisePlan> getExercisePlansByUser(String userName) {
+        List<model.ExercisePlan> plans = new ArrayList<>();
+        String sql = "SELECT * FROM exercise_plan WHERE user_name = ? ORDER BY plan_date DESC, id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    model.ExercisePlan plan = new model.ExercisePlan();
+                    plan.setId(rs.getInt("id"));
+                    plan.setUserName(rs.getString("user_name"));
+                    plan.setExerciseType(rs.getString("exercise_type"));
+                    plan.setPlanDate(rs.getDate("plan_date").toLocalDate());
+                    
+                    double duration = rs.getDouble("duration");
+                    if (!rs.wasNull()) {
+                        plan.setDuration(duration);
+                    }
+                    
+                    plan.setIntensity(rs.getString("intensity"));
+                    plan.setCompleted(rs.getBoolean("is_completed"));
+                    
+                    double actualDuration = rs.getDouble("actual_duration");
+                    if (!rs.wasNull()) {
+                        plan.setActualDuration(actualDuration);
+                    }
+                    
+                    plan.setNotes(rs.getString("notes"));
+                    plan.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    plan.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+                    
+                    plans.add(plan);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return plans;
+    }
+    
+    /**
+     * 根据ID删除运动计划
+     */
+    public static boolean deleteExercisePlanById(int id) {
+        String sql = "DELETE FROM exercise_plan WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * 更新运动计划完成状态
+     */
+    public static boolean updatePlanCompletionStatus(int id, boolean isCompleted) {
+        String sql = "UPDATE exercise_plan SET is_completed = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBoolean(1, isCompleted);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * 更新运动计划完成状态和实际时长
+     */
+    public static boolean updatePlanCompletionStatus(int id, boolean isCompleted, Double actualDuration) {
+        String sql = "UPDATE exercise_plan SET is_completed = ?, actual_duration = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBoolean(1, isCompleted);
+            if (actualDuration != null) {
+                pstmt.setDouble(2, actualDuration);
+            } else {
+                pstmt.setNull(2, Types.DECIMAL);
+            }
+            pstmt.setInt(3, id);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
