@@ -61,7 +61,7 @@ public class DatabaseManager {
     public static void initializeDatabase() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS user_profile (" +
             "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID'," +
-            "name VARCHAR(50) NOT NULL COMMENT '姓名'," +
+            "name VARCHAR(50) NOT NULL UNIQUE COMMENT '姓名-唯一'," +
             "age INT NOT NULL COMMENT '年龄'," +
             "gender ENUM('男', '女') NOT NULL COMMENT '性别'," +
             "height DECIMAL(5,2) NOT NULL COMMENT '身高(cm)'," +
@@ -78,7 +78,7 @@ public class DatabaseManager {
         
         String createDailyRecordTableSQL = "CREATE TABLE IF NOT EXISTS daily_record (" +
             "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '记录ID'," +
-            "user_id INT COMMENT '用户ID'," +
+            "user_name VARCHAR(50) NOT NULL COMMENT '用户名'," +
             "date DATE NOT NULL COMMENT '日期'," +
             "weight DECIMAL(5,2) COMMENT '体重(kg)'," +
             "exercise VARCHAR(100) COMMENT '运动内容'," +
@@ -87,22 +87,24 @@ public class DatabaseManager {
             "mood VARCHAR(20) COMMENT '心情'," +
             "note TEXT COMMENT '备注'," +
             "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
-            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'" +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+            "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日健康记录表'";
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
             stmt.executeUpdate(createTableSQL);
-            System.out.println("数据库表初始化成功");
+            System.out.println("用户档案表检查完成");
             stmt.executeUpdate(createDailyRecordTableSQL);
-            System.out.println("每日记录表初始化成功");
+            System.out.println("每日记录表检查完成");
             
         } catch (SQLException e) {
             System.err.println("数据库表初始化失败: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, 
-                "数据库表初始化失败:\n" + e.getMessage(), 
-                "数据库错误", JOptionPane.ERROR_MESSAGE);
+            // 注释掉弹窗，避免启动时的错误提示
+            // JOptionPane.showMessageDialog(null, 
+            //     "数据库表初始化失败:\n" + e.getMessage(), 
+            //     "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -118,12 +120,15 @@ public class DatabaseManager {
             return false;
         }
         
-        // 先检查用户是否已存在
-        UserProfile existingProfile = loadUserProfile();
+        // 根据用户名检查用户是否已存在
+        UserProfile existingProfile = getUserProfileByName(profile.getName());
         
         if (existingProfile != null) {
+            // 如果存在，设置ID并更新
+            profile.setId(existingProfile.getId());
             return updateUserProfile(profile);
         } else {
+            // 如果不存在，插入新记录
             return insertUserProfile(profile);
         }
     }
@@ -137,21 +142,33 @@ public class DatabaseManager {
                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS)) {
             
             setProfileParameters(pstmt, profile);
             
             int result = pstmt.executeUpdate();
             if (result > 0) {
-                System.out.println("用户档案插入成功");
+                // 获取生成的ID并设置到profile对象中
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        profile.setId(generatedKeys.getInt(1));
+                    }
+                }
+                System.out.println("用户档案插入成功，ID: " + profile.getId());
                 return true;
             }
             
         } catch (SQLException e) {
             System.err.println("用户档案插入失败: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, 
-                "保存用户档案失败:\n" + e.getMessage(), 
-                "数据库错误", JOptionPane.ERROR_MESSAGE);
+            if (e.getMessage().contains("Duplicate entry")) {
+                JOptionPane.showMessageDialog(null, 
+                    "用户名已存在，请使用不同的用户名！", 
+                    "用户名重复", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, 
+                    "保存用户档案失败:\n" + e.getMessage(), 
+                    "数据库错误", JOptionPane.ERROR_MESSAGE);
+            }
         }
         
         return false;
@@ -221,6 +238,7 @@ public class DatabaseManager {
             if (rs.next()) {
                 UserProfile profile = new UserProfile();
                 
+                profile.setId(rs.getInt("id"));
                 profile.setName(rs.getString("name"));
                 profile.setAge(rs.getInt("age"));
                 profile.setGender(rs.getString("gender"));
@@ -386,6 +404,37 @@ public class DatabaseManager {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    /**
+     * 根据用户名获取用户档案
+     */
+    public static UserProfile getUserProfileByName(String name) {
+        String sql = "SELECT * FROM user_profile WHERE name = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    UserProfile profile = new UserProfile();
+                    profile.setId(rs.getInt("id"));
+                    profile.setName(rs.getString("name"));
+                    profile.setAge(rs.getInt("age"));
+                    profile.setGender(rs.getString("gender"));
+                    profile.setHeight(rs.getDouble("height"));
+                    profile.setWeight(rs.getDouble("weight"));
+                    profile.setTargetWeight(rs.getDouble("target_weight"));
+                    profile.setFitnessGoal(rs.getString("fitness_goal"));
+                    profile.setHealthStatus(rs.getString("health_status"));
+                    profile.setHealthNotes(rs.getString("health_notes"));
+                    profile.setPhone(rs.getString("phone"));
+                    return profile;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
     
     /**
