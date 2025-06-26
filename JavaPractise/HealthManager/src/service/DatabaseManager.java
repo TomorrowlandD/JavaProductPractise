@@ -16,12 +16,12 @@ import model.DailyRecord;
 public class DatabaseManager {
     
     // 数据库连接配置
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/health_manager";
-    private static final String DB_USER = "root";  // 默认用户名，可根据实际情况修改
-    private static final String DB_PASSWORD = "DGH20231505";  // 默认密码为空，可根据实际情况修改
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/health_manager";  //数据库连接的URL
+    private static final String DB_USER = "root";   //数据库连接的主机
+    private static final String DB_PASSWORD = "DGH20231505";    //数据库连接的密码
     
     // JDBC驱动类名
-    private static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    private static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";  //驱动类的名称
     
     /**
      * 获取数据库连接
@@ -42,7 +42,6 @@ public class DatabaseManager {
     
     /**
      * 测试数据库连接
-     * 
      * @return 连接是否成功
      */
     public static boolean testConnection() {

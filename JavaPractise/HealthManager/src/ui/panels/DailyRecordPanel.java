@@ -279,7 +279,6 @@ public class DailyRecordPanel extends JPanel {
         }
         if (userNameComboBox.getItemCount() == 0) {
             saveButton.setEnabled(false);
-            JOptionPane.showMessageDialog(this, "请先在用户档案页添加用户！", "提示", JOptionPane.WARNING_MESSAGE);
         } else {
             saveButton.setEnabled(true);
         }
