@@ -39,6 +39,8 @@ public class ExercisePlanPanel extends JPanel {
     private PlanTableModel planTableModel;
     private JLabel statsLabel;
     private java.util.List<ExercisePlan> currentPlans = new java.util.ArrayList<>();
+    // 新增：当前编辑的计划ID，-1表示新增模式
+    private int editingPlanId = -1;
     
     /**
      * 获取支持中文的字体
@@ -238,14 +240,24 @@ public class ExercisePlanPanel extends JPanel {
         
         // 删除计划按钮
         deletePlanButton.addActionListener(e -> {
-            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
-            if (selected != null) {
-                // TODO: 实现删除功能（Day 3）
-                JOptionPane.showMessageDialog(this, "删除功能将在Day 3实现", "提示", JOptionPane.INFORMATION_MESSAGE);
+            if (editingPlanId != -1) {
+                // 删除当前编辑的计划
+                int result = JOptionPane.showConfirmDialog(this, 
+                    "确定要删除当前编辑的计划吗？", "确认删除", 
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                
+                if (result == JOptionPane.YES_OPTION) {
+                    if (DatabaseManager.deleteExercisePlanById(editingPlanId)) {
+                        JOptionPane.showMessageDialog(this, "计划删除成功！", "删除成功", JOptionPane.INFORMATION_MESSAGE);
+                        clearForm();
+                        refreshPlanTable();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "删除失败，请重试", "删除失败", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
             } else {
-                JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "请先选择要删除的计划（点击表格中的某一行）", "提示", JOptionPane.WARNING_MESSAGE);
             }
-            refreshPlanTable();
         });
         
         // 保存计划按钮
@@ -258,6 +270,16 @@ public class ExercisePlanPanel extends JPanel {
         dateField.addActionListener(e -> {
             if (dateField.getText().trim().isEmpty()) {
                 dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            }
+        });
+        // 新增：表格行点击事件，自动填充表单
+        planTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && planTable.getSelectedRow() != -1) {
+                int row = planTable.getSelectedRow();
+                if (row >= 0 && row < currentPlans.size()) {
+                    ExercisePlan plan = currentPlans.get(row);
+                    fillFormWithPlan(plan);
+                }
             }
         });
     }
@@ -303,6 +325,9 @@ public class ExercisePlanPanel extends JPanel {
         intensityBox.setSelectedItem("中");
         notesArea.setText("无特殊备注");
         statusLabel.setText("表单已清空，请填写新计划");
+        // 新增：重置编辑ID，恢复为新增模式
+        editingPlanId = -1;
+        saveButton.setText("保存计划");
     }
     
     /**
@@ -320,6 +345,11 @@ public class ExercisePlanPanel extends JPanel {
             // 创建运动计划对象
             ExercisePlan plan = new ExercisePlan();
             plan.setUserName(selectedUser.getName());
+            
+            // 如果是编辑模式，设置ID
+            if (editingPlanId != -1) {
+                plan.setId(editingPlanId);
+            }
             
             // 多选运动类型
             StringBuilder types = new StringBuilder();
@@ -383,25 +413,61 @@ public class ExercisePlanPanel extends JPanel {
                 return;
             }
             
-            // 保存到数据库
-            if (DatabaseManager.insertExercisePlan(plan)) {
+            // 根据编辑状态选择保存或更新
+            boolean success = false;
+            String operationType = "";
+            
+            if (editingPlanId != -1) {
+                // 编辑模式：更新现有计划
+                success = DatabaseManager.updateExercisePlan(plan);
+                operationType = "修改";
+            } else {
+                // 新增模式：插入新计划
+                success = DatabaseManager.insertExercisePlan(plan);
+                operationType = "保存";
+            }
+            
+            if (success) {
                 JOptionPane.showMessageDialog(this, 
-                    "运动计划保存成功！\n\n" +
+                    "运动计划" + operationType + "成功！\n\n" +
                     "用户：" + plan.getUserName() + "\n" +
                     "运动：" + plan.getExerciseType() + "\n" +
                     "日期：" + plan.getPlanDateString() + "\n" +
                     "时长：" + plan.getDurationString(), 
-                    "保存成功", JOptionPane.INFORMATION_MESSAGE);
+                    operationType + "成功", JOptionPane.INFORMATION_MESSAGE);
                 
                 clearForm();
-                statusLabel.setText("计划已保存，可继续制定新计划");
+                statusLabel.setText("计划已" + operationType + "，可继续制定新计划");
             } else {
-                JOptionPane.showMessageDialog(this, "保存失败，请检查数据", "错误", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, operationType + "失败，请检查数据", "错误", JOptionPane.ERROR_MESSAGE);
             }
             
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "保存失败：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    // 新增：将计划数据填充到表单（编辑模式）
+    private void fillFormWithPlan(ExercisePlan plan) {
+        // 运动类型多选
+        String[] types = plan.getExerciseType().split(",");
+        for (JCheckBox cb : exerciseTypeChecks) {
+            cb.setSelected(false);
+            for (String t : types) {
+                if (cb.getText().equals(t.trim())) {
+                    cb.setSelected(true);
+                }
+            }
+        }
+        // 其他字段
+        dateField.setText(plan.getPlanDateString());
+        durationField.setText(plan.getDuration() != null ? String.valueOf(plan.getDuration()) : "");
+        intensityBox.setSelectedItem(plan.getIntensity());
+        notesArea.setText(plan.getNotes() != null ? plan.getNotes() : "");
+        // 设置编辑ID
+        editingPlanId = plan.getId();
+        saveButton.setText("保存修改");
+        statusLabel.setText("正在编辑计划（ID=" + plan.getId() + ")，修改后请点击保存修改");
     }
     
     // 3. TableModel内部类
