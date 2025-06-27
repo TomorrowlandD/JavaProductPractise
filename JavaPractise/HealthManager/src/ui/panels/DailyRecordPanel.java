@@ -25,7 +25,7 @@ public class DailyRecordPanel extends JPanel {
     private JTable recordTable;
     private DefaultTableModel tableModel;
     private JButton deleteButton;
-    private Integer editingRecordId = null;
+    private Integer editingRecordId = -1;
     private JComboBox<UserProfile> userComboBox;
     private JComboBox<String> userNameComboBox;
 
@@ -149,6 +149,16 @@ public class DailyRecordPanel extends JPanel {
                 return;
             }
             LocalDate date = LocalDate.parse(dateField.getText().trim());
+            // 优化唯一性校验：只查当前用户的记录，editingRecordId为-1表示新增
+            List<DailyRecord> records = DatabaseManager.getDailyRecordsByUser(selectedUserName);
+            boolean exists = records.stream().anyMatch(r ->
+                r.getDate().equals(date)
+                && (editingRecordId == -1 || r.getId() != editingRecordId)
+            );
+            if (exists) {
+                JOptionPane.showMessageDialog(this, "该用户该日期已存在每日记录，请勿重复添加", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             // 日期合理性校验
             LocalDate minDate = LocalDate.of(2020, 1, 1);
             LocalDate maxDate = LocalDate.now().plusYears(1);
@@ -182,22 +192,34 @@ public class DailyRecordPanel extends JPanel {
             record.setSleepDuration(sleepDuration);
             record.setMood(mood);
             record.setNote(note);
-            if (editingRecordId != null) record.setId(editingRecordId);
-
-            boolean success;
-            if (editingRecordId == null) {
+            if (editingRecordId == -1) {
                 // 新增
-                success = DatabaseManager.saveDailyRecord(record);
+                record.setDate(date);
+                record.setWeight(weight);
+                record.setExercise(exercise);
+                record.setExerciseDuration(exerciseDuration);
+                record.setSleepDuration(sleepDuration);
+                record.setMood(mood);
+                record.setNote(note);
+                boolean success = DatabaseManager.saveDailyRecord(record);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "保存成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    clearForm();
+                    refreshTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "保存失败！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
             } else {
                 // 更新
-                success = DatabaseManager.updateDailyRecord(record);
-            }
-            if (success) {
-                JOptionPane.showMessageDialog(this, "保存成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
-                clearForm();
-                refreshTable();
-            } else {
-                JOptionPane.showMessageDialog(this, "保存失败！", "错误", JOptionPane.ERROR_MESSAGE);
+                record.setId(editingRecordId);
+                boolean success = DatabaseManager.updateDailyRecord(record);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "保存成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    clearForm();
+                    refreshTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "保存失败！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
             }
         } catch (DateTimeParseException ex) {
             JOptionPane.showMessageDialog(this, "日期格式错误，应为yyyy-MM-dd！", "错误", JOptionPane.ERROR_MESSAGE);
@@ -229,7 +251,7 @@ public class DailyRecordPanel extends JPanel {
     private void onTableSelect() {
         int row = recordTable.getSelectedRow();
         if (row == -1) {
-            editingRecordId = null;
+            editingRecordId = -1;
             clearForm();
             return;
         }
@@ -292,7 +314,7 @@ public class DailyRecordPanel extends JPanel {
         sleepDurationField.setText("");
         moodBox.setSelectedIndex(0);
         noteArea.setText("");
-        editingRecordId = null;
+        editingRecordId = -1;
         recordTable.clearSelection();
     }
 } 

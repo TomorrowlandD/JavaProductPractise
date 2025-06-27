@@ -439,12 +439,23 @@ public class ExercisePlanPanel extends JPanel {
                 dateField.requestFocus();
                 return;
             }
+            LocalDate planDate;
             try {
-                LocalDate planDate = LocalDate.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                planDate = LocalDate.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                 plan.setPlanDate(planDate);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", "提示", JOptionPane.WARNING_MESSAGE);
                 dateField.requestFocus();
+                return;
+            }
+            // 唯一性校验：同一用户同一天只能有一条计划，编辑时排除自身
+            List<ExercisePlan> plans = DatabaseManager.getExercisePlansByUser(selectedUser.getName());
+            boolean exists = plans.stream().anyMatch(p ->
+                p.getPlanDate().equals(planDate)
+                && (editingPlanId == -1 || p.getId() != editingPlanId)
+            );
+            if (exists) {
+                JOptionPane.showMessageDialog(this, "该用户该日期已存在运动计划，请勿重复添加", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             

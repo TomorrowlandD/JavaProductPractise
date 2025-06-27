@@ -87,6 +87,7 @@ public class DatabaseManager {
             "note TEXT COMMENT '备注'," +
             "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
             "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+            "UNIQUE KEY uniq_user_date (user_name, date)," +
             "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日健康记录表'";
         
@@ -102,6 +103,7 @@ public class DatabaseManager {
             "notes TEXT COMMENT '备注'," +
             "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
             "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+            "UNIQUE KEY uniq_user_plan_date (user_name, plan_date)," +
             "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运动计划表'";
         
@@ -1442,5 +1444,35 @@ public class DatabaseManager {
         if (stats.getRecommendations().isEmpty()) {
             stats.addRecommendation("健康状况良好，请继续保持！");
         }
+    }
+
+    /**
+     * 根据用户名获取每日记录
+     */
+    public static List<DailyRecord> getDailyRecordsByUser(String userName) {
+        List<DailyRecord> records = new ArrayList<>();
+        String sql = "SELECT * FROM daily_record WHERE user_name = ? ORDER BY date DESC, id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    DailyRecord record = new DailyRecord();
+                    record.setId(rs.getInt("id"));
+                    record.setUserName(rs.getString("user_name"));
+                    record.setDate(rs.getDate("date").toLocalDate());
+                    record.setWeight(rs.getDouble("weight"));
+                    record.setExercise(rs.getString("exercise"));
+                    record.setExerciseDuration(rs.getDouble("exercise_duration"));
+                    record.setSleepDuration(rs.getDouble("sleep_duration"));
+                    record.setMood(rs.getString("mood"));
+                    record.setNote(rs.getString("note"));
+                    records.add(record);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return records;
     }
 } 
