@@ -21,6 +21,7 @@ public class ExercisePlanPanel extends JPanel {
     private JComboBox<UserProfile> userComboBox;
     private JButton addPlanButton;
     private JButton deletePlanButton;
+    private JButton cancelEditButton;
     
     // 计划制定组件
     private JPanel exerciseTypePanel;
@@ -39,8 +40,11 @@ public class ExercisePlanPanel extends JPanel {
     private PlanTableModel planTableModel;
     private JLabel statsLabel;
     private java.util.List<ExercisePlan> currentPlans = new java.util.ArrayList<>();
-    // 新增：当前编辑的计划ID，-1表示新增模式
     private int editingPlanId = -1;
+    // 新增：跟踪表单是否有未保存的修改
+    private boolean hasUnsavedChanges = false;
+    // 新增：保存原始数据用于比较
+    private ExercisePlan originalPlan = null;
     
     /**
      * 获取支持中文的字体
@@ -82,6 +86,7 @@ public class ExercisePlanPanel extends JPanel {
         userComboBox = new JComboBox<>();
         addPlanButton = new JButton("新增计划");
         deletePlanButton = new JButton("删除计划");
+        cancelEditButton = new JButton("取消编辑");
         
         // 计划制定组件
         exerciseTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -116,6 +121,7 @@ public class ExercisePlanPanel extends JPanel {
         userComboBox.setFont(defaultFont);
         addPlanButton.setFont(defaultFont);
         deletePlanButton.setFont(defaultFont);
+        cancelEditButton.setFont(defaultFont);
         for (JCheckBox cb : exerciseTypeChecks) cb.setFont(defaultFont);
         dateField.setFont(defaultFont);
         durationField.setFont(defaultFont);
@@ -170,6 +176,7 @@ public class ExercisePlanPanel extends JPanel {
         panel.add(userComboBox);
         panel.add(addPlanButton);
         panel.add(deletePlanButton);
+        panel.add(cancelEditButton);
         
         return panel;
     }
@@ -238,6 +245,12 @@ public class ExercisePlanPanel extends JPanel {
         // 新增计划按钮
         addPlanButton.addActionListener(e -> clearForm());
         
+        // 取消编辑按钮
+        cancelEditButton.addActionListener(e -> {
+            clearForm();
+            planTable.clearSelection();
+        });
+        
         // 删除计划按钮
         deletePlanButton.addActionListener(e -> {
             if (editingPlanId != -1) {
@@ -277,8 +290,50 @@ public class ExercisePlanPanel extends JPanel {
             if (!e.getValueIsAdjusting() && planTable.getSelectedRow() != -1) {
                 int row = planTable.getSelectedRow();
                 if (row >= 0 && row < currentPlans.size()) {
+                    // 检查是否有未保存的修改
+                    if (!checkUnsavedChanges()) {
+                        // 用户选择不放弃修改，恢复原来的选中状态
+                        planTable.getSelectionModel().setSelectionInterval(
+                            getRowIndexById(editingPlanId), 
+                            getRowIndexById(editingPlanId)
+                        );
+                        return;
+                    }
+                    
                     ExercisePlan plan = currentPlans.get(row);
                     fillFormWithPlan(plan);
+                }
+            }
+        });
+        
+        // 新增：双击表格行切换选中状态
+        planTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    // 双击时取消选中
+                    planTable.clearSelection();
+                    clearForm();
+                }
+            }
+        });
+        
+        // 新增：为表单组件添加变化监听器
+        setupFormChangeListeners();
+        
+        // 新增：点击表单区域取消表格选中
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // 如果点击的是表单区域（不是表格区域），则取消表格选中
+                if (e.getSource() == ExercisePlanPanel.this || 
+                    e.getSource() instanceof JPanel || 
+                    e.getSource() instanceof JTextField || 
+                    e.getSource() instanceof JTextArea || 
+                    e.getSource() instanceof JComboBox ||
+                    e.getSource() instanceof JCheckBox) {
+                    planTable.clearSelection();
+                    clearForm();
                 }
             }
         });
@@ -328,6 +383,11 @@ public class ExercisePlanPanel extends JPanel {
         // 新增：重置编辑ID，恢复为新增模式
         editingPlanId = -1;
         saveButton.setText("保存计划");
+        // 新增：清除表格选中状态
+        planTable.clearSelection();
+        // 新增：重置修改标记和原始数据
+        hasUnsavedChanges = false;
+        originalPlan = null;
     }
     
     /**
@@ -438,6 +498,8 @@ public class ExercisePlanPanel extends JPanel {
                 
                 clearForm();
                 statusLabel.setText("计划已" + operationType + "，可继续制定新计划");
+                // 新增：重置修改标记
+                hasUnsavedChanges = false;
             } else {
                 JOptionPane.showMessageDialog(this, operationType + "失败，请检查数据", "错误", JOptionPane.ERROR_MESSAGE);
             }
@@ -468,6 +530,18 @@ public class ExercisePlanPanel extends JPanel {
         editingPlanId = plan.getId();
         saveButton.setText("保存修改");
         statusLabel.setText("正在编辑计划（ID=" + plan.getId() + ")，修改后请点击保存修改");
+        
+        // 新增：保存原始数据并重置修改标记
+        originalPlan = new ExercisePlan();
+        originalPlan.setId(plan.getId());
+        originalPlan.setUserName(plan.getUserName());
+        originalPlan.setExerciseType(plan.getExerciseType());
+        originalPlan.setPlanDate(plan.getPlanDate());
+        originalPlan.setDuration(plan.getDuration());
+        originalPlan.setIntensity(plan.getIntensity());
+        originalPlan.setNotes(plan.getNotes());
+        originalPlan.setCompleted(plan.isCompleted());
+        hasUnsavedChanges = false;
     }
     
     // 3. TableModel内部类
@@ -513,5 +587,76 @@ public class ExercisePlanPanel extends JPanel {
         }
         String rate = total > 0 ? String.format("%.0f%%", completed * 100.0 / total) : "0%";
         statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s", total, completed, rate));
+    }
+    
+    /**
+     * 为表单组件添加变化监听器
+     */
+    private void setupFormChangeListeners() {
+        // 运动类型复选框变化监听
+        for (JCheckBox cb : exerciseTypeChecks) {
+            cb.addActionListener(e -> markFormChanged());
+        }
+        
+        // 日期字段变化监听
+        dateField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+        });
+        
+        // 时长字段变化监听
+        durationField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+        });
+        
+        // 强度下拉框变化监听
+        intensityBox.addActionListener(e -> markFormChanged());
+        
+        // 备注文本区域变化监听
+        notesArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+        });
+    }
+    
+    /**
+     * 标记表单已发生变化
+     */
+    private void markFormChanged() {
+        if (editingPlanId != -1) {
+            hasUnsavedChanges = true;
+            statusLabel.setText("正在编辑计划（ID=" + editingPlanId + "），有未保存的修改");
+        }
+    }
+    
+    /**
+     * 检查是否有未保存的修改
+     */
+    private boolean checkUnsavedChanges() {
+        if (hasUnsavedChanges && editingPlanId != -1) {
+            int result = JOptionPane.showConfirmDialog(this,
+                "当前有未保存的修改，确定要放弃修改吗？",
+                "确认放弃修改",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+            return result == JOptionPane.YES_OPTION;
+        }
+        return true;
+    }
+    
+    /**
+     * 根据计划ID查找表格中的行索引
+     */
+    private int getRowIndexById(int planId) {
+        for (int i = 0; i < currentPlans.size(); i++) {
+            if (currentPlans.get(i).getId() == planId) {
+                return i;
+            }
+        }
+        return -1;
     }
 } 
