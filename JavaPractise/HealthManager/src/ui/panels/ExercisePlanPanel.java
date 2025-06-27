@@ -5,6 +5,9 @@ import model.UserProfile;
 import service.DatabaseManager;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+//import javax.swing.table.DefaultCellEditor;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -155,6 +158,10 @@ public class ExercisePlanPanel extends JPanel {
         planTableModel = new PlanTableModel();
         planTable = new JTable(planTableModel);
         planTable.setRowHeight(24);
+        
+        // 新增：为完成状态列设置复选框编辑器
+        setupCompletionColumnEditor();
+        
         JScrollPane tableScroll = new JScrollPane(planTable);
         tableScroll.setPreferredSize(new Dimension(0, 180));
         statsLabel = new JLabel("统计：");
@@ -566,6 +573,34 @@ public class ExercisePlanPanel extends JPanel {
             if (col == 5) return Boolean.class;
             return String.class;
         }
+        @Override public boolean isCellEditable(int row, int col) {
+            return col == 5; // 只有完成状态列可编辑
+        }
+        @Override public void setValueAt(Object value, int row, int col) {
+            if (col == 5 && row >= 0 && row < currentPlans.size()) {
+                ExercisePlan plan = currentPlans.get(row);
+                boolean newValue = (Boolean) value;
+                if (plan.isCompleted() != newValue) {
+                    plan.setCompleted(newValue);
+                    // 立即更新数据库
+                    if (DatabaseManager.updateExercisePlan(plan)) {
+                        // 通过SwingUtilities.invokeLater确保在EDT中执行UI更新
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            statusLabel.setText("完成状态已更新");
+                            updateStatsLabel(); // 更新统计信息
+                        });
+                    } else {
+                        // 更新失败，恢复原状态
+                        plan.setCompleted(!newValue);
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(ExercisePlanPanel.this, 
+                                "更新完成状态失败，请重试", "更新失败", JOptionPane.ERROR_MESSAGE);
+                        });
+                    }
+                }
+                fireTableCellUpdated(row, col);
+            }
+        }
     }
     
     // 4. 刷新表格和统计信息
@@ -658,5 +693,41 @@ public class ExercisePlanPanel extends JPanel {
             }
         }
         return -1;
+    }
+    
+    // 新增：为完成状态列设置复选框编辑器
+    private void setupCompletionColumnEditor() {
+        // 为第5列（完成状态列）设置复选框编辑器
+        planTable.getColumnModel().getColumn(5).setCellEditor(
+            new javax.swing.DefaultCellEditor(new JCheckBox())
+        );
+        
+        // 添加表格数据变化监听器
+        planTableModel.addTableModelListener(e -> {
+            if (e.getColumn() == 5) { // 完成状态列
+                int row = e.getFirstRow();
+                if (row >= 0 && row < currentPlans.size()) {
+                    ExercisePlan plan = currentPlans.get(row);
+                    boolean newCompleted = (Boolean) planTableModel.getValueAt(row, 5);
+                    
+                    // 如果完成状态发生变化，更新数据库
+                    if (plan.isCompleted() != newCompleted) {
+                        plan.setCompleted(newCompleted);
+                        if (DatabaseManager.updateExercisePlan(plan)) {
+                            statusLabel.setText("完成状态已更新");
+                            updateStatsLabel(); // 更新统计信息
+                        } else {
+                            // 更新失败，恢复原状态
+                            plan.setCompleted(!newCompleted); // 恢复原状态
+                            planTableModel.fireTableCellUpdated(row, 5); // 刷新表格显示
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(ExercisePlanPanel.this, 
+                                    "更新完成状态失败，请重试", "更新失败", JOptionPane.ERROR_MESSAGE);
+                            });
+                        }
+                    }
+                }
+            }
+        });
     }
 } 
