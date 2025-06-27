@@ -19,6 +19,7 @@ public class DietPanel extends JPanel {
 
     // 顶部：用户选择与操作按钮
     private JComboBox<UserProfile> userComboBox;
+    private JTextField dateField;
     private JButton addDietButton;
     private JButton deleteDietButton;
     private JButton cancelEditButton;
@@ -56,6 +57,8 @@ public class DietPanel extends JPanel {
     private void initializeComponents() {
         // 顶部
         userComboBox = new JComboBox<>();
+        dateField = new JTextField(10);
+        dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         addDietButton = new JButton("新增饮食");
         deleteDietButton = new JButton("删除");
         cancelEditButton = new JButton("取消编辑");
@@ -112,11 +115,13 @@ public class DietPanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 顶部：用户选择+操作按钮+保存
+        // 顶部：用户选择+日期+操作按钮+保存
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         topPanel.setBorder(new TitledBorder("用户选择"));
         topPanel.add(new JLabel("选择用户:"));
         topPanel.add(userComboBox);
+        topPanel.add(new JLabel("日期:"));
+        topPanel.add(dateField);
         topPanel.add(addDietButton);
         topPanel.add(deleteDietButton);
         topPanel.add(cancelEditButton);
@@ -313,6 +318,7 @@ public class DietPanel extends JPanel {
         lunchNone.setSelected(false);
         dinnerNone.setSelected(false);
         notesArea.setText("无特殊备注");
+        dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         editingDietId = -1;
         saveButton.setText("保存");
         statusLabel.setText("表单已清空，请填写新饮食记录");
@@ -341,6 +347,7 @@ public class DietPanel extends JPanel {
         // 晚餐
         fillMealForm(dinnerChecks, dinnerOther, dinnerNone, record.getDinner());
         notesArea.setText(record.getNotes() != null ? record.getNotes() : "");
+        dateField.setText(record.getRecordDateString());
         saveButton.setText("保存修改");
         statusLabel.setText("正在编辑饮食记录（ID=" + record.getId() + ")，修改后请点击保存修改");
     }
@@ -401,6 +408,35 @@ public class DietPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        String dateText = dateField.getText().trim();
+        LocalDate recordDate;
+        try {
+            recordDate = LocalDate.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "日期格式错误，请使用yyyy-MM-dd", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (recordDate.isAfter(LocalDate.now())) {
+            JOptionPane.showMessageDialog(this, "日期不能晚于今天", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        // 校验是否已存在同一天的记录（新增时校验，编辑时排除自己）
+        List<DietRecord> records = DatabaseManager.getDietRecordsByUser(selectedUser.getName());
+        boolean exists = records.stream().anyMatch(r ->
+            r.getRecordDate().equals(recordDate) && (editingDietId == -1 || r.getId() != editingDietId)
+        );
+        if (exists) {
+            JOptionPane.showMessageDialog(this, "该用户该日期已存在饮食记录，请勿重复添加", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        // 组装DietRecord
+        DietRecord record = new DietRecord();
+        record.setUserName(selectedUser.getName());
+        record.setRecordDate(recordDate);
+        record.setBreakfast(collectMealString(breakfastChecks, breakfastOther, breakfastNone));
+        record.setLunch(collectMealString(lunchChecks, lunchOther, lunchNone));
+        record.setDinner(collectMealString(dinnerChecks, dinnerOther, dinnerNone));
+        record.setNotes(notesArea.getText().trim());
         // 校验三餐
         if (!isMealValid(breakfastChecks, breakfastOther, breakfastNone)) {
             JOptionPane.showMessageDialog(this, "请为早餐选择食物或勾选'无安排'", "提示", JOptionPane.WARNING_MESSAGE);
@@ -414,14 +450,6 @@ public class DietPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "请为晚餐选择食物或勾选'无安排'", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // 组装DietRecord
-        DietRecord record = new DietRecord();
-        record.setUserName(selectedUser.getName());
-        record.setRecordDate(LocalDate.now()); // 这里可根据实际需求选择日期
-        record.setBreakfast(collectMealString(breakfastChecks, breakfastOther, breakfastNone));
-        record.setLunch(collectMealString(lunchChecks, lunchOther, lunchNone));
-        record.setDinner(collectMealString(dinnerChecks, dinnerOther, dinnerNone));
-        record.setNotes(notesArea.getText().trim());
         boolean success;
         if (editingDietId != -1) {
             record.setId(editingDietId);
