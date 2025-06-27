@@ -940,4 +940,507 @@ public class DatabaseManager {
         if (updated != null) record.setUpdatedAt(updated.toLocalDateTime());
         return record;
     }
+
+    // ==================== 数据统计相关操作 ====================
+    
+    /**
+     * 计算用户健康统计数据
+     */
+    public static model.HealthStats calculateHealthStats(String userName, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        // 参数验证
+        if (userName == null || userName.trim().isEmpty()) {
+            return null;
+        }
+        if (startDate == null || endDate == null) {
+            return null;
+        }
+        if (startDate.isAfter(endDate)) {
+            return null;
+        }
+        
+        model.HealthStats stats = new model.HealthStats(userName);
+        stats.setStartDate(startDate);
+        stats.setEndDate(endDate);
+        
+        try (Connection conn = getConnection()) {
+            // 1. 获取用户基本信息（BMI计算）
+            UserProfile userProfile = getUserProfileByName(userName);
+            if (userProfile != null) {
+                double height = userProfile.getHeight();
+                double weight = userProfile.getWeight();
+                double targetWeight = userProfile.getTargetWeight();
+                
+                // 计算BMI - 添加有效性检查
+                if (height > 0 && weight > 0) {
+                    double bmi = weight / Math.pow(height / 100, 2);
+                    stats.setCurrentBMI(Math.round(bmi * 10.0) / 10.0);
+                    
+                    // 设置BMI状态
+                    if (bmi < 18.5) stats.setBmiStatus("偏瘦");
+                    else if (bmi < 24) stats.setBmiStatus("正常");
+                    else if (bmi < 28) stats.setBmiStatus("偏胖");
+                    else stats.setBmiStatus("肥胖");
+                } else {
+                    stats.setCurrentBMI(0);
+                    stats.setBmiStatus("数据不足");
+                }
+                
+                // 计算目标达成进度 - 修复计算逻辑
+                if (targetWeight > 0 && weight > 0) {
+                    double currentWeight = weight;
+                    double progress = 0;
+                    
+                    // 计算当前体重与目标体重的差距百分比
+                    if (currentWeight > targetWeight) {
+                        // 减重目标：计算减重进度
+                        // 这里简化处理，假设目标达成进度为0%（因为当前体重超过目标体重）
+                        progress = 0;
+                    } else if (currentWeight < targetWeight) {
+                        // 增重目标：计算增重进度
+                        // 这里简化处理，假设目标达成进度为0%（因为当前体重低于目标体重）
+                        progress = 0;
+                    } else {
+                        // 已达到目标
+                        progress = 100;
+                    }
+                    stats.setGoalProgress(Math.round(progress * 10.0) / 10.0);
+                }
+            }
+            
+            // 2. 计算体重变化（修复查询逻辑）
+            // 获取结束日期的体重
+            String currentWeightSQL = "SELECT weight FROM daily_record WHERE user_name = ? AND date <= ? ORDER BY date DESC LIMIT 1";
+            try (PreparedStatement pstmt = conn.prepareStatement(currentWeightSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        double currentWeight = rs.getDouble("weight");
+                        
+                        // 获取开始日期的体重
+                        String oldWeightSQL = "SELECT weight FROM daily_record WHERE user_name = ? AND date <= ? ORDER BY date DESC LIMIT 1";
+                        try (PreparedStatement oldPstmt = conn.prepareStatement(oldWeightSQL)) {
+                            oldPstmt.setString(1, userName);
+                            oldPstmt.setDate(2, java.sql.Date.valueOf(startDate.minusDays(1))); // 获取开始日期前一天的体重
+                            try (ResultSet oldRs = oldPstmt.executeQuery()) {
+                                if (oldRs.next()) {
+                                    double oldWeight = oldRs.getDouble("weight");
+                                    double weightChange = currentWeight - oldWeight;
+                                    stats.setWeightChange(Math.round(weightChange * 10.0) / 10.0);
+                                } else {
+                                    // 如果没有历史体重记录，设为0
+                                    stats.setWeightChange(0);
+                                }
+                            }
+                        }
+                    } else {
+                        // 如果没有体重记录，设为0
+                        stats.setWeightChange(0);
+                    }
+                }
+            }
+            
+            // 3. 计算运动完成率
+            String exerciseSQL = "SELECT COUNT(*) as total, SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed FROM exercise_plan WHERE user_name = ? AND plan_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(exerciseSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int total = rs.getInt("total");
+                        int completed = rs.getInt("completed");
+                        if (total > 0) {
+                            double completionRate = (double) completed / total * 100;
+                            stats.setExerciseCompletionRate(Math.round(completionRate * 10.0) / 10.0);
+                        } else {
+                            stats.setExerciseCompletionRate(0);
+                        }
+                    }
+                }
+            }
+            
+            // 4. 计算饮食记录频率
+            String dietSQL = "SELECT COUNT(DISTINCT record_date) as days_with_records FROM diet_record WHERE user_name = ? AND record_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(dietSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        int daysWithRecords = rs.getInt("days_with_records");
+                        long totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+                        if (totalDays > 0) {
+                            double frequency = (double) daysWithRecords / totalDays * 100;
+                            stats.setDietRecordFrequency(Math.round(frequency * 10.0) / 10.0);
+                        } else {
+                            stats.setDietRecordFrequency(0);
+                        }
+                    }
+                }
+            }
+            
+            // 5. 计算健康评分
+            String healthScore = calculateHealthScore(stats);
+            stats.setHealthScore(healthScore);
+            
+            // 6. 生成健康建议
+            generateHealthRecommendations(stats);
+            
+        } catch (SQLException e) {
+            System.err.println("计算健康统计失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * 计算运动统计数据
+     */
+    public static model.ExerciseStats calculateExerciseStats(String userName, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        // 参数验证
+        if (userName == null || userName.trim().isEmpty()) {
+            return null;
+        }
+        if (startDate == null || endDate == null) {
+            return null;
+        }
+        if (startDate.isAfter(endDate)) {
+            return null;
+        }
+        
+        model.ExerciseStats stats = new model.ExerciseStats(userName);
+        stats.setStartDate(startDate);
+        stats.setEndDate(endDate);
+        
+        try (Connection conn = getConnection()) {
+            // 1. 获取运动计划总数和完成数
+            String countSQL = "SELECT COUNT(*) as total, SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed, SUM(COALESCE(duration, 0)) as total_duration FROM exercise_plan WHERE user_name = ? AND plan_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(countSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        stats.setTotalPlans(rs.getInt("total"));
+                        stats.setCompletedPlans(rs.getInt("completed"));
+                        double totalDuration = rs.getDouble("total_duration");
+                        if (rs.wasNull()) {
+                            totalDuration = 0.0;
+                        }
+                        stats.setTotalDuration(totalDuration);
+                        stats.calculateCompletionRate();
+                        stats.calculateAverageDuration();
+                    }
+                }
+            }
+            
+            // 2. 获取运动类型分布
+            String typeSQL = "SELECT exercise_type, COUNT(*) as count FROM exercise_plan WHERE user_name = ? AND plan_date BETWEEN ? AND ? AND exercise_type IS NOT NULL GROUP BY exercise_type";
+            try (PreparedStatement pstmt = conn.prepareStatement(typeSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        String exerciseType = rs.getString("exercise_type");
+                        if (exerciseType != null && !exerciseType.trim().isEmpty()) {
+                            stats.addExerciseType(exerciseType);
+                        }
+                    }
+                }
+            }
+            
+            // 3. 获取强度分布
+            String intensitySQL = "SELECT intensity, COUNT(*) as count FROM exercise_plan WHERE user_name = ? AND plan_date BETWEEN ? AND ? AND intensity IS NOT NULL GROUP BY intensity";
+            try (PreparedStatement pstmt = conn.prepareStatement(intensitySQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        String intensity = rs.getString("intensity");
+                        int count = rs.getInt("count");
+                        stats.addIntensity(intensity);
+                    }
+                }
+            }
+            
+            // 4. 获取有运动计划的天数
+            String activeDaysSQL = "SELECT COUNT(DISTINCT plan_date) as active_days FROM exercise_plan WHERE user_name = ? AND plan_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(activeDaysSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        stats.setActiveDays(rs.getInt("active_days"));
+                    }
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("计算运动统计失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * 计算饮食统计数据
+     */
+    public static model.DietStats calculateDietStats(String userName, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        // 参数验证
+        if (userName == null || userName.trim().isEmpty()) {
+            return null;
+        }
+        if (startDate == null || endDate == null) {
+            return null;
+        }
+        if (startDate.isAfter(endDate)) {
+            return null;
+        }
+        
+        model.DietStats stats = new model.DietStats(userName);
+        stats.setStartDate(startDate);
+        stats.setEndDate(endDate);
+        
+        try (Connection conn = getConnection()) {
+            // 1. 获取饮食记录总数和有记录的天数
+            String countSQL = "SELECT COUNT(*) as total_records, COUNT(DISTINCT record_date) as days_with_records FROM diet_record WHERE user_name = ? AND record_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(countSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        stats.setTotalRecords(rs.getInt("total_records"));
+                        stats.setDaysWithRecords(rs.getInt("days_with_records"));
+                        
+                        // 计算记录频率
+                        long totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+                        stats.calculateRecordFrequency((int) totalDays);
+                        stats.calculateAverageMealsPerDay();
+                    }
+                }
+            }
+            
+            // 2. 统计三餐完成情况
+            String mealSQL = "SELECT breakfast, lunch, dinner FROM diet_record WHERE user_name = ? AND record_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(mealSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        String breakfast = rs.getString("breakfast");
+                        String lunch = rs.getString("lunch");
+                        String dinner = rs.getString("dinner");
+                        
+                        if (breakfast != null && !breakfast.trim().isEmpty() && !"无安排".equals(breakfast.trim())) {
+                            stats.addMealCompletion("早餐");
+                        }
+                        if (lunch != null && !lunch.trim().isEmpty() && !"无安排".equals(lunch.trim())) {
+                            stats.addMealCompletion("午餐");
+                        }
+                        if (dinner != null && !dinner.trim().isEmpty() && !"无安排".equals(dinner.trim())) {
+                            stats.addMealCompletion("晚餐");
+                        }
+                    }
+                }
+            }
+            
+            // 3. 统计食物偏好（简化版，统计常见食物）
+            String foodSQL = "SELECT breakfast, lunch, dinner FROM diet_record WHERE user_name = ? AND record_date BETWEEN ? AND ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(foodSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        String[] meals = {rs.getString("breakfast"), rs.getString("lunch"), rs.getString("dinner")};
+                        for (String meal : meals) {
+                            if (meal != null && !meal.trim().isEmpty() && !"无安排".equals(meal.trim())) {
+                                String[] foods = meal.split(",");
+                                for (String food : foods) {
+                                    food = food.trim();
+                                    if (!food.isEmpty() && !food.startsWith("其它:")) {
+                                        stats.addFoodPreference(food);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 4. 计算连续记录天数（修复计算逻辑）
+            String consecutiveSQL = "SELECT record_date FROM diet_record WHERE user_name = ? AND record_date BETWEEN ? AND ? ORDER BY record_date";
+            try (PreparedStatement pstmt = conn.prepareStatement(consecutiveSQL)) {
+                pstmt.setString(1, userName);
+                pstmt.setDate(2, java.sql.Date.valueOf(startDate));
+                pstmt.setDate(3, java.sql.Date.valueOf(endDate));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    int maxConsecutiveDays = 0;
+                    int currentConsecutiveDays = 0;
+                    java.time.LocalDate lastDate = null;
+                    
+                    while (rs.next()) {
+                        java.time.LocalDate currentDate = rs.getDate("record_date").toLocalDate();
+                        
+                        if (lastDate == null) {
+                            // 第一条记录
+                            currentConsecutiveDays = 1;
+                        } else if (currentDate.equals(lastDate.plusDays(1))) {
+                            // 连续日期
+                            currentConsecutiveDays++;
+                        } else {
+                            // 不连续，重新开始计数
+                            currentConsecutiveDays = 1;
+                        }
+                        
+                        // 更新最大连续天数
+                        if (currentConsecutiveDays > maxConsecutiveDays) {
+                            maxConsecutiveDays = currentConsecutiveDays;
+                        }
+                        
+                        lastDate = currentDate;
+                    }
+                    
+                    stats.setConsecutiveDays(maxConsecutiveDays);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("计算饮食统计失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * 计算健康评分
+     */
+    private static String calculateHealthScore(model.HealthStats stats) {
+        if (stats == null) {
+            return "D";
+        }
+        
+        double score = 0;
+        
+        // BMI评分（30%权重）
+        String bmiStatus = stats.getBmiStatus();
+        if (bmiStatus != null) {
+            if ("正常".equals(bmiStatus)) {
+                score += 30;
+            } else if ("偏瘦".equals(bmiStatus) || "偏胖".equals(bmiStatus)) {
+                score += 20;
+            } else if ("肥胖".equals(bmiStatus)) {
+                score += 10;
+            } else {
+                // 数据不足或其他情况
+                score += 5;
+            }
+        }
+        
+        // 运动完成率评分（30%权重）
+        double exerciseRate = stats.getExerciseCompletionRate();
+        if (exerciseRate >= 80) {
+            score += 30;
+        } else if (exerciseRate >= 60) {
+            score += 20;
+        } else if (exerciseRate >= 40) {
+            score += 10;
+        } else {
+            score += 0;
+        }
+        
+        // 饮食记录频率评分（20%权重）
+        double dietFrequency = stats.getDietRecordFrequency();
+        if (dietFrequency >= 80) {
+            score += 20;
+        } else if (dietFrequency >= 60) {
+            score += 15;
+        } else if (dietFrequency >= 40) {
+            score += 10;
+        } else {
+            score += 0;
+        }
+        
+        // 体重变化评分（20%权重）
+        double weightChange = Math.abs(stats.getWeightChange());
+        if (weightChange <= 1) {
+            score += 20;
+        } else if (weightChange <= 3) {
+            score += 15;
+        } else if (weightChange <= 5) {
+            score += 10;
+        } else {
+            score += 0;
+        }
+        
+        // 根据总分确定等级
+        if (score >= 85) return "A";
+        else if (score >= 70) return "B";
+        else if (score >= 55) return "C";
+        else return "D";
+    }
+    
+    /**
+     * 生成健康建议
+     */
+    private static void generateHealthRecommendations(model.HealthStats stats) {
+        if (stats == null) {
+            return;
+        }
+        
+        // BMI建议
+        String bmiStatus = stats.getBmiStatus();
+        if (bmiStatus != null) {
+            switch (bmiStatus) {
+                case "偏瘦":
+                    stats.addRecommendation("建议适当增加营养摄入，多吃富含蛋白质的食物");
+                    break;
+                case "偏胖":
+                    stats.addRecommendation("建议控制饮食热量，增加运动量");
+                    break;
+                case "肥胖":
+                    stats.addRecommendation("建议制定减重计划，必要时咨询医生");
+                    break;
+                case "数据不足":
+                    stats.addRecommendation("建议完善身高体重信息，以便进行更准确的健康评估");
+                    break;
+            }
+        }
+        
+        // 运动建议
+        double exerciseRate = stats.getExerciseCompletionRate();
+        if (exerciseRate < 70) {
+            stats.addRecommendation("建议提高运动计划的完成率，制定更合理的计划");
+        }
+        
+        // 饮食建议
+        double dietFrequency = stats.getDietRecordFrequency();
+        if (dietFrequency < 70) {
+            stats.addRecommendation("建议养成每日记录饮食的习惯");
+        }
+        
+        // 体重建议
+        double weightChange = stats.getWeightChange();
+        if (Math.abs(weightChange) > 3) {
+            if (weightChange > 0) {
+                stats.addRecommendation("体重增长较快，建议控制饮食");
+            } else {
+                stats.addRecommendation("体重下降较快，注意营养补充");
+            }
+        }
+        
+        // 如果没有具体建议，添加鼓励性建议
+        if (stats.getRecommendations().isEmpty()) {
+            stats.addRecommendation("健康状况良好，请继续保持！");
+        }
+    }
 } 
