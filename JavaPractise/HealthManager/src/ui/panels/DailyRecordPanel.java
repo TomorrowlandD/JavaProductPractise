@@ -27,7 +27,7 @@ public class DailyRecordPanel extends JPanel {
     private JButton deleteButton;
     private Integer editingRecordId = -1;
     private JComboBox<UserProfile> userComboBox;
-    private JComboBox<String> userNameComboBox;
+    private JButton refreshBtn;
 
     public DailyRecordPanel() {
         setLayout(new BorderLayout());
@@ -37,24 +37,17 @@ public class DailyRecordPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0; gbc.gridy = 0;
 
-        // 用户名选择
+        // 用户选择区域
         JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        userPanel.add(new JLabel("选择用户名:"));
-        userNameComboBox = new JComboBox<>();
-        userPanel.add(userNameComboBox);
-        formPanel.add(userPanel, gbc);
-
-        // 用户选择
-        userPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         userPanel.add(new JLabel("选择用户:"));
         userComboBox = new JComboBox<>();
-        // 加载用户列表
-        java.util.List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        for (UserProfile user : userList) {
-            userComboBox.addItem(user);
-        }
+        refreshBtn = new JButton("刷新");
         userPanel.add(userComboBox);
+        userPanel.add(refreshBtn);
+        formPanel.add(userPanel, gbc);
+
         // 日期
+        gbc.gridx = 0; gbc.gridy++;
         formPanel.add(new JLabel("日期(yyyy-MM-dd):"), gbc);
         gbc.gridx = 1;
         dateField = new JTextField(10);
@@ -135,22 +128,29 @@ public class DailyRecordPanel extends JPanel {
         clearButton.addActionListener(e -> clearForm());
         deleteButton.addActionListener(e -> onDelete());
         recordTable.getSelectionModel().addListSelectionListener(e -> onTableSelect());
+        
+        // 用户切换时刷新表格
+        userComboBox.addActionListener(e -> refreshTable());
+        
+        // 刷新按钮事件
+        refreshBtn.addActionListener(e -> refreshUserComboBox());
 
-        // 初始化表格数据
-        refreshTable();
+        // 初始化用户列表和表格数据
+        refreshUserComboBox();
     }
 
     private void onSave(ActionEvent e) {
         try {
-            // 校验是否选择了用户名
-            String selectedUserName = (String) userNameComboBox.getSelectedItem();
-            if (selectedUserName == null || selectedUserName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请先选择用户名！", "提示", JOptionPane.WARNING_MESSAGE);
+            // 校验是否选择了用户
+            UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+            if (selectedUser == null) {
+                JOptionPane.showMessageDialog(this, "请先选择用户！", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            
             LocalDate date = LocalDate.parse(dateField.getText().trim());
             // 优化唯一性校验：只查当前用户的记录，editingRecordId为-1表示新增
-            List<DailyRecord> records = DatabaseManager.getDailyRecordsByUser(selectedUserName);
+            List<DailyRecord> records = DatabaseManager.getDailyRecordsByUser(selectedUser.getName());
             boolean exists = records.stream().anyMatch(r ->
                 r.getDate().equals(date)
                 && (editingRecordId == -1 || r.getId() != editingRecordId)
@@ -184,7 +184,7 @@ public class DailyRecordPanel extends JPanel {
 
             DailyRecord record = new DailyRecord();
             // 设置用户名
-            record.setUserName(selectedUserName);
+            record.setUserName(selectedUser.getName());
             record.setDate(date);
             record.setWeight(weight);
             record.setExercise(exercise);
@@ -194,13 +194,6 @@ public class DailyRecordPanel extends JPanel {
             record.setNote(note);
             if (editingRecordId == -1) {
                 // 新增
-                record.setDate(date);
-                record.setWeight(weight);
-                record.setExercise(exercise);
-                record.setExerciseDuration(exerciseDuration);
-                record.setSleepDuration(sleepDuration);
-                record.setMood(mood);
-                record.setNote(note);
                 boolean success = DatabaseManager.saveDailyRecord(record);
                 if (success) {
                     JOptionPane.showMessageDialog(this, "保存成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
@@ -266,7 +259,14 @@ public class DailyRecordPanel extends JPanel {
     }
 
     private void refreshTable() {
-        List<DailyRecord> records = DatabaseManager.getAllDailyRecords();
+        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+        List<DailyRecord> records;
+        if (selectedUser != null) {
+            records = DatabaseManager.getDailyRecordsByUser(selectedUser.getName());
+        } else {
+            records = new java.util.ArrayList<>();
+        }
+        
         tableModel.setRowCount(0);
         for (DailyRecord r : records) {
             tableModel.addRow(new Object[]{
@@ -287,23 +287,43 @@ public class DailyRecordPanel extends JPanel {
             recordTable.getColumnModel().getColumn(0).setMaxWidth(0);
             recordTable.getColumnModel().getColumn(0).setWidth(0);
         }
-        // 刷新用户名下拉框
-        refreshUserNameComboBox();
     }
 
-    private void refreshUserNameComboBox() {
-        userNameComboBox.removeAllItems();
-        java.util.List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+    private void refreshUserComboBox() {
+        // 保存当前选中的用户
+        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+        String selectedUserName = selectedUser != null ? selectedUser.getName() : null;
+        
+        // 刷新用户列表
+        userComboBox.removeAllItems();
+        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
         for (UserProfile user : userList) {
-            if (user.getName() != null && !user.getName().isEmpty()) {
-                userNameComboBox.addItem(user.getName());
-            }
+            userComboBox.addItem(user);
         }
-        if (userNameComboBox.getItemCount() == 0) {
+        
+        // 恢复选中状态
+        if (selectedUserName != null) {
+            for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                UserProfile user = userComboBox.getItemAt(i);
+                if (user.getName().equals(selectedUserName)) {
+                    userComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else if (userComboBox.getItemCount() > 0) {
+            // 如果没有之前选中的用户，选择第一个
+            userComboBox.setSelectedIndex(0);
+        }
+        
+        // 更新按钮状态
+        if (userComboBox.getItemCount() == 0) {
             saveButton.setEnabled(false);
         } else {
             saveButton.setEnabled(true);
         }
+        
+        // 刷新表格数据
+        refreshTable();
     }
 
     protected void clearForm() {

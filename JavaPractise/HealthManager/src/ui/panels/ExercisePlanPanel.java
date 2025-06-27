@@ -22,6 +22,7 @@ public class ExercisePlanPanel extends JPanel {
     
     // 用户选择组件
     private JComboBox<UserProfile> userComboBox;
+    private JButton refreshBtn;
     private JButton addPlanButton;
     private JButton deletePlanButton;
     private JButton cancelEditButton;
@@ -87,6 +88,7 @@ public class ExercisePlanPanel extends JPanel {
     private void initializeComponents() {
         // 用户选择组件
         userComboBox = new JComboBox<>();
+        refreshBtn = new JButton("刷新");
         addPlanButton = new JButton("新增计划");
         deletePlanButton = new JButton("删除计划");
         cancelEditButton = new JButton("取消编辑");
@@ -122,6 +124,7 @@ public class ExercisePlanPanel extends JPanel {
         
         // 设置字体
         userComboBox.setFont(defaultFont);
+        refreshBtn.setFont(defaultFont);
         addPlanButton.setFont(defaultFont);
         deletePlanButton.setFont(defaultFont);
         cancelEditButton.setFont(defaultFont);
@@ -181,6 +184,7 @@ public class ExercisePlanPanel extends JPanel {
         
         panel.add(new JLabel("选择用户:"));
         panel.add(userComboBox);
+        panel.add(refreshBtn);
         panel.add(addPlanButton);
         panel.add(deletePlanButton);
         panel.add(cancelEditButton);
@@ -344,6 +348,31 @@ public class ExercisePlanPanel extends JPanel {
                 }
             }
         });
+        
+        // 刷新按钮
+        refreshBtn.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            String selectedName = selected != null ? selected.getName() : null;
+            userComboBox.removeAllItems();
+            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            for (UserProfile user : userList) {
+                userComboBox.addItem(user);
+            }
+            if (selectedName != null) {
+                for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                    UserProfile user = userComboBox.getItemAt(i);
+                    if (user.getName().equals(selectedName)) {
+                        userComboBox.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            } else if (userComboBox.getItemCount() > 0) {
+                // 如果没有之前选中的用户，选择第一个
+                userComboBox.setSelectedIndex(0);
+            }
+            // 刷新表格数据
+            refreshPlanTable();
+        });
     }
     
     /**
@@ -367,14 +396,37 @@ public class ExercisePlanPanel extends JPanel {
      * 刷新用户下拉框
      */
     private void refreshUserComboBox() {
+        // 保存当前选中的用户
+        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+        String selectedUserName = selectedUser != null ? selectedUser.getName() : null;
+        
+        // 刷新用户列表
         List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
         userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
         
+        // 恢复选中状态
+        if (selectedUserName != null) {
+            for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                UserProfile user = userComboBox.getItemAt(i);
+                if (user.getName().equals(selectedUserName)) {
+                    userComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else if (!userList.isEmpty()) {
+            // 如果没有之前选中的用户，选择第一个
+            userComboBox.setSelectedIndex(0);
+        }
+        
+        // 更新状态标签
         if (userList.isEmpty()) {
             statusLabel.setText("暂无用户，请先在用户档案中添加用户");
         } else {
             statusLabel.setText("请选择用户制定运动计划");
         }
+        
+        // 刷新表格数据
+        refreshPlanTable();
     }
     
     /**
@@ -729,7 +781,7 @@ public class ExercisePlanPanel extends JPanel {
                             updateStatsLabel(); // 更新统计信息
                         } else {
                             // 更新失败，恢复原状态
-                            plan.setCompleted(!newCompleted); // 恢复原状态
+                            plan.setCompleted(!newCompleted);
                             planTableModel.fireTableCellUpdated(row, 5); // 刷新表格显示
                             javax.swing.SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(ExercisePlanPanel.this, 

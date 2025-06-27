@@ -46,8 +46,7 @@ public class DataAnalysisPanel extends JPanel {
         panel.setLayout(new BorderLayout(10, 10));
 
         // 用户选择下拉框
-        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(userList.toArray(new UserProfile[0]));
+        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
@@ -96,9 +95,7 @@ public class DataAnalysisPanel extends JPanel {
                 table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
                 return;
             }
-            List<DailyRecord> records = DatabaseManager.getAllDailyRecords();
-            // 只保留当前用户的记录
-            records.removeIf(r -> !selectedUser.getName().equals(r.getUserName()));
+            List<DailyRecord> records = DatabaseManager.getDailyRecordsByUser(selectedUser.getName());
             // 按日期升序
             Collections.sort(records, java.util.Comparator.comparing(DailyRecord::getDate));
             if (records.isEmpty()) {
@@ -166,7 +163,26 @@ public class DataAnalysisPanel extends JPanel {
         // 用户切换事件
         userComboBox.addActionListener(e -> refresh.run());
         // 刷新按钮事件
-        refreshBtn.addActionListener(e -> refresh.run());
+        refreshBtn.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            String selectedName = selected != null ? selected.getName() : null;
+            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            if (selectedName != null) {
+                for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                    UserProfile user = userComboBox.getItemAt(i);
+                    if (user.getName().equals(selectedName)) {
+                        userComboBox.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            } else if (userComboBox.getItemCount() > 0) {
+                // 如果没有之前选中的用户，选择第一个
+                userComboBox.setSelectedIndex(0);
+            }
+            // 刷新统计和表格数据
+            refresh.run();
+        });
         return panel;
     }
 
@@ -176,8 +192,7 @@ public class DataAnalysisPanel extends JPanel {
         panel.setLayout(new BorderLayout(10, 10));
 
         // 用户选择下拉框和刷新按钮
-        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(userList.toArray(new UserProfile[0]));
+        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
@@ -253,7 +268,26 @@ public class DataAnalysisPanel extends JPanel {
         // 用户切换事件
         userComboBox.addActionListener(e -> refresh.run());
         // 刷新按钮事件
-        refreshBtn.addActionListener(e -> refresh.run());
+        refreshBtn.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            String selectedName = selected != null ? selected.getName() : null;
+            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            if (selectedName != null) {
+                for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                    UserProfile user = userComboBox.getItemAt(i);
+                    if (user.getName().equals(selectedName)) {
+                        userComboBox.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            } else if (userComboBox.getItemCount() > 0) {
+                // 如果没有之前选中的用户，选择第一个
+                userComboBox.setSelectedIndex(0);
+            }
+            // 刷新统计和表格数据
+            refresh.run();
+        });
         return panel;
     }
 
@@ -263,8 +297,7 @@ public class DataAnalysisPanel extends JPanel {
         panel.setLayout(new BorderLayout(10, 10));
 
         // 用户选择下拉框和刷新按钮
-        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(userList.toArray(new UserProfile[0]));
+        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
@@ -344,7 +377,26 @@ public class DataAnalysisPanel extends JPanel {
         // 用户切换事件
         userComboBox.addActionListener(e -> refresh.run());
         // 刷新按钮事件
-        refreshBtn.addActionListener(e -> refresh.run());
+        refreshBtn.addActionListener(e -> {
+            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+            String selectedName = selected != null ? selected.getName() : null;
+            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            if (selectedName != null) {
+                for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                    UserProfile user = userComboBox.getItemAt(i);
+                    if (user.getName().equals(selectedName)) {
+                        userComboBox.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            } else if (userComboBox.getItemCount() > 0) {
+                // 如果没有之前选中的用户，选择第一个
+                userComboBox.setSelectedIndex(0);
+            }
+            // 刷新统计和表格数据
+            refresh.run();
+        });
         return panel;
     }
 } 

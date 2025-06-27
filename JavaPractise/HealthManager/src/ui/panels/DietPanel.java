@@ -24,6 +24,7 @@ public class DietPanel extends JPanel {
     private JButton deleteDietButton;
     private JButton cancelEditButton;
     private JButton saveButton;
+    private JButton refreshBtn;
 
     // 中部：三餐内容录入
     private JPanel breakfastPanel, lunchPanel, dinnerPanel;
@@ -57,6 +58,7 @@ public class DietPanel extends JPanel {
     private void initializeComponents() {
         // 顶部
         userComboBox = new JComboBox<>();
+        refreshBtn = new JButton("刷新");
         dateField = new JTextField(10);
         dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         addDietButton = new JButton("新增饮食");
@@ -120,6 +122,7 @@ public class DietPanel extends JPanel {
         topPanel.setBorder(new TitledBorder("用户选择"));
         topPanel.add(new JLabel("选择用户:"));
         topPanel.add(userComboBox);
+        topPanel.add(refreshBtn);
         topPanel.add(new JLabel("日期:"));
         topPanel.add(dateField);
         topPanel.add(addDietButton);
@@ -269,6 +272,9 @@ public class DietPanel extends JPanel {
             public void removeUpdate(javax.swing.event.DocumentEvent e) { handleAnyCheckOrOther(dinnerNone, dinnerChecks, dinnerOther); }
             public void insertUpdate(javax.swing.event.DocumentEvent e) { handleAnyCheckOrOther(dinnerNone, dinnerChecks, dinnerOther); }
         });
+
+        // 刷新按钮
+        refreshBtn.addActionListener(e -> refreshUserComboBox());
     }
 
     // 勾选"无安排"时禁用其它选项，取消时恢复
@@ -295,10 +301,30 @@ public class DietPanel extends JPanel {
     }
 
     private void refreshUserComboBox() {
+        // 保存当前选中的用户
+        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+        String selectedUserName = selectedUser != null ? selectedUser.getName() : null;
+        
+        // 刷新用户列表
         List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
         userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
-        if (!userList.isEmpty()) {
+        
+        // 恢复选中状态
+        if (selectedUserName != null) {
+            for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                UserProfile user = userComboBox.getItemAt(i);
+                if (user.getName().equals(selectedUserName)) {
+                    userComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else if (!userList.isEmpty()) {
+            // 如果没有之前选中的用户，选择第一个
             userComboBox.setSelectedIndex(0);
+        }
+        
+        // 刷新表格数据
+        if (!userList.isEmpty()) {
             refreshDietTable();
         } else {
             dietTableModel.setRecords(new java.util.ArrayList<>());
