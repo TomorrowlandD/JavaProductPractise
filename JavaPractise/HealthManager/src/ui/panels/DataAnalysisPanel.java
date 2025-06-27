@@ -8,6 +8,9 @@ import java.util.List;
 import model.DailyRecord;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import model.ExercisePlan;
+import java.util.Comparator;
+import model.DietRecord;
 
 public class DataAnalysisPanel extends JPanel {
     private JComboBox<String> statsTypeCombo;
@@ -167,57 +170,181 @@ public class DataAnalysisPanel extends JPanel {
         return panel;
     }
 
-    // 运动统计面板（带用户选择框）
+    // 运动统计面板（带用户选择框、刷新按钮、统计展示和历史表格）
     private JPanel createExerciseStatsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout(10, 10));
 
-        // 用户选择下拉框
+        // 用户选择下拉框和刷新按钮
         List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
         JComboBox<UserProfile> userComboBox = new JComboBox<>(userList.toArray(new UserProfile[0]));
+        JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
+        topPanel.add(refreshBtn);
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // 占位内容
-        JLabel placeholder = new JLabel("运动统计面板开发中...");
-        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
-        panel.add(placeholder, BorderLayout.CENTER);
+        // 统计区
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+        JLabel completionLabel = new JLabel();
+        JLabel activeDaysLabel = new JLabel();
+        statsPanel.add(completionLabel);
+        statsPanel.add(activeDaysLabel);
 
-        // 用户切换事件（预留刷新逻辑）
-        userComboBox.addActionListener(e -> {
+        // 表格区
+        String[] columns = {"日期", "类型", "计划时长", "实际时长", "强度", "完成状态"};
+        Object[][] tableData = {};
+        JTable table = new JTable(tableData, columns);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setPreferredSize(new Dimension(0, 200));
+
+        // 垂直容器，统计区+表格区
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(statsPanel);
+        centerPanel.add(Box.createVerticalStrut(10));
+        centerPanel.add(tableScroll);
+        panel.add(centerPanel, BorderLayout.CENTER);
+
+        // 刷新统计和表格
+        Runnable refresh = () -> {
             UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
-            // TODO: 根据selectedUser刷新统计内容
-        });
-
+            if (selectedUser == null) {
+                completionLabel.setText("暂无用户");
+                activeDaysLabel.setText("");
+                table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
+                return;
+            }
+            List<ExercisePlan> plans = DatabaseManager.getExercisePlansByUser(selectedUser.getName());
+            if (plans == null || plans.isEmpty()) {
+                completionLabel.setText("暂无运动计划记录");
+                activeDaysLabel.setText("");
+                table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
+                return;
+            }
+            // 按日期升序
+            plans.sort(Comparator.comparing(ExercisePlan::getPlanDate));
+            // 统计完成率
+            int total = plans.size();
+            int completed = (int) plans.stream().filter(ExercisePlan::isCompleted).count();
+            double completionRate = total > 0 ? (double) completed / total * 100 : 0.0;
+            // 统计活跃天数
+            long activeDays = plans.stream().map(ExercisePlan::getPlanDate).distinct().count();
+            // 展示
+            completionLabel.setText(String.format("本周期完成率：%.1f%%", completionRate));
+            activeDaysLabel.setText(String.format("本周期活跃天数：%d天", activeDays));
+            // 表格数据
+            Object[][] data = new Object[plans.size()][6];
+            for (int i = 0; i < plans.size(); i++) {
+                ExercisePlan p = plans.get(i);
+                data[i][0] = p.getPlanDateString();
+                data[i][1] = p.getExerciseType();
+                data[i][2] = p.getDurationString();
+                data[i][3] = p.getActualDurationString();
+                data[i][4] = p.getIntensity();
+                data[i][5] = p.getCompletionStatusText();
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        };
+        // 初始刷新
+        refresh.run();
+        // 用户切换事件
+        userComboBox.addActionListener(e -> refresh.run());
+        // 刷新按钮事件
+        refreshBtn.addActionListener(e -> refresh.run());
         return panel;
     }
 
-    // 饮食统计面板（带用户选择框）
+    // 饮食统计面板（带用户选择框、刷新按钮、统计展示和历史表格）
     private JPanel createDietStatsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout(10, 10));
 
-        // 用户选择下拉框
+        // 用户选择下拉框和刷新按钮
         List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
         JComboBox<UserProfile> userComboBox = new JComboBox<>(userList.toArray(new UserProfile[0]));
+        JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
+        topPanel.add(refreshBtn);
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // 占位内容
-        JLabel placeholder = new JLabel("饮食统计面板开发中...");
-        placeholder.setHorizontalAlignment(SwingConstants.CENTER);
-        panel.add(placeholder, BorderLayout.CENTER);
+        // 统计区
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+        JLabel daysLabel = new JLabel();
+        JLabel freqLabel = new JLabel();
+        statsPanel.add(daysLabel);
+        statsPanel.add(freqLabel);
 
-        // 用户切换事件（预留刷新逻辑）
-        userComboBox.addActionListener(e -> {
+        // 表格区
+        String[] columns = {"日期", "早餐", "午餐", "晚餐", "备注"};
+        Object[][] tableData = {};
+        JTable table = new JTable(tableData, columns);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setPreferredSize(new Dimension(0, 200));
+
+        // 垂直容器，统计区+表格区
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.add(statsPanel);
+        centerPanel.add(Box.createVerticalStrut(10));
+        centerPanel.add(tableScroll);
+        panel.add(centerPanel, BorderLayout.CENTER);
+
+        // 刷新统计和表格
+        Runnable refresh = () -> {
             UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
-            // TODO: 根据selectedUser刷新统计内容
-        });
-
+            if (selectedUser == null) {
+                daysLabel.setText("暂无用户");
+                freqLabel.setText("");
+                table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
+                return;
+            }
+            List<DietRecord> records = DatabaseManager.getDietRecordsByUser(selectedUser.getName());
+            if (records == null || records.isEmpty()) {
+                daysLabel.setText("暂无饮食记录");
+                freqLabel.setText("");
+                table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
+                return;
+            }
+            // 按日期升序
+            records.sort(java.util.Comparator.comparing(DietRecord::getRecordDate));
+            // 统计天数
+            long days = records.stream().map(DietRecord::getRecordDate).distinct().count();
+            // 统计频率（以用户有记录的天数/总天数，若只有一条则为100%）
+            long totalDays = 1;
+            if (records.size() > 1) {
+                totalDays = java.time.temporal.ChronoUnit.DAYS.between(
+                    records.get(0).getRecordDate(),
+                    records.get(records.size() - 1).getRecordDate()
+                ) + 1;
+            }
+            double freq = totalDays > 0 ? (double) days / totalDays * 100 : 100.0;
+            // 展示
+            daysLabel.setText(String.format("本周期饮食记录天数：%d天", days));
+            freqLabel.setText(String.format("本周期记录频率：%.1f%%", freq));
+            // 表格数据
+            Object[][] data = new Object[records.size()][5];
+            for (int i = 0; i < records.size(); i++) {
+                DietRecord r = records.get(i);
+                data[i][0] = r.getRecordDateString();
+                data[i][1] = r.getBreakfast();
+                data[i][2] = r.getLunch();
+                data[i][3] = r.getDinner();
+                data[i][4] = r.getNotes();
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        };
+        // 初始刷新
+        refresh.run();
+        // 用户切换事件
+        userComboBox.addActionListener(e -> refresh.run());
+        // 刷新按钮事件
+        refreshBtn.addActionListener(e -> refresh.run());
         return panel;
     }
 } 
