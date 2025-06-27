@@ -34,6 +34,12 @@ public class ExercisePlanPanel extends JPanel {
     // 状态显示
     private JLabel statusLabel;
     
+    // 1. 添加成员变量
+    private JTable planTable;
+    private PlanTableModel planTableModel;
+    private JLabel statsLabel;
+    private java.util.List<ExercisePlan> currentPlans = new java.util.ArrayList<>();
+    
     /**
      * 获取支持中文的字体
      */
@@ -137,8 +143,17 @@ public class ExercisePlanPanel extends JPanel {
         JPanel centerPanel = createCenterPanel();
         add(centerPanel, BorderLayout.CENTER);
         
-        // 底部：状态显示
-        JPanel bottomPanel = createBottomPanel();
+        // 新增底部历史计划表和统计
+        planTableModel = new PlanTableModel();
+        planTable = new JTable(planTableModel);
+        planTable.setRowHeight(24);
+        JScrollPane tableScroll = new JScrollPane(planTable);
+        tableScroll.setPreferredSize(new Dimension(0, 180));
+        statsLabel = new JLabel("统计：");
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
+        bottomPanel.add(tableScroll);
+        bottomPanel.add(statsLabel);
         add(bottomPanel, BorderLayout.SOUTH);
     }
     
@@ -204,16 +219,6 @@ public class ExercisePlanPanel extends JPanel {
     }
     
     /**
-     * 创建底部面板（状态显示）
-     */
-    private JPanel createBottomPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setBorder(BorderFactory.createEtchedBorder());
-        panel.add(statusLabel);
-        return panel;
-    }
-    
-    /**
      * 设置事件处理
      */
     private void setupEventHandlers() {
@@ -225,6 +230,7 @@ public class ExercisePlanPanel extends JPanel {
             } else {
                 statusLabel.setText("请选择用户");
             }
+            refreshPlanTable();
         });
         
         // 新增计划按钮
@@ -239,10 +245,14 @@ public class ExercisePlanPanel extends JPanel {
             } else {
                 JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
             }
+            refreshPlanTable();
         });
         
         // 保存计划按钮
-        saveButton.addActionListener(e -> saveExercisePlan());
+        saveButton.addActionListener(e -> {
+            saveExercisePlan();
+            refreshPlanTable();
+        });
         
         // 日期字段回车键设置今天日期
         dateField.addActionListener(e -> {
@@ -392,5 +402,50 @@ public class ExercisePlanPanel extends JPanel {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "保存失败：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    // 3. TableModel内部类
+    private class PlanTableModel extends javax.swing.table.AbstractTableModel {
+        private final String[] columns = {"日期", "类型", "总时长", "强度", "备注", "完成"};
+        @Override public int getRowCount() { return currentPlans.size(); }
+        @Override public int getColumnCount() { return columns.length; }
+        @Override public String getColumnName(int col) { return columns[col]; }
+        @Override public Object getValueAt(int row, int col) {
+            ExercisePlan plan = currentPlans.get(row);
+            switch (col) {
+                case 0: return plan.getPlanDateString();
+                case 1: return plan.getExerciseType();
+                case 2: return plan.getDurationString();
+                case 3: return plan.getIntensity();
+                case 4: return plan.getNotes();
+                case 5: return plan.isCompleted();
+                default: return "";
+            }
+        }
+        @Override public Class<?> getColumnClass(int col) {
+            if (col == 5) return Boolean.class;
+            return String.class;
+        }
+    }
+    
+    // 4. 刷新表格和统计信息
+    private void refreshPlanTable() {
+        UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+        if (selected != null) {
+            currentPlans = DatabaseManager.getExercisePlansByUser(selected.getName());
+        } else {
+            currentPlans = new java.util.ArrayList<>();
+        }
+        planTableModel.fireTableDataChanged();
+        updateStatsLabel();
+    }
+    private void updateStatsLabel() {
+        int total = currentPlans.size();
+        int completed = 0;
+        for (ExercisePlan plan : currentPlans) {
+            if (plan.isCompleted()) completed++;
+        }
+        String rate = total > 0 ? String.format("%.0f%%", completed * 100.0 / total) : "0%";
+        statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s", total, completed, rate));
     }
 } 
