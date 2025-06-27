@@ -787,4 +787,157 @@ public class DatabaseManager {
             return false;
         }
     }
+
+    // ==================== 饮食记录相关操作 ====================
+    /**
+     * 插入新的饮食记录
+     */
+    public static boolean insertDietRecord(model.DietRecord record) {
+        if (record == null) return false;
+        model.DietRecord.ValidationResult result = record.validateRecord();
+        if (!result.isValid()) {
+            System.err.println("数据验证失败: " + result.getMessage());
+            javax.swing.JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", javax.swing.JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        String insertSQL = "INSERT INTO diet_record (user_name, record_date, breakfast, lunch, dinner, notes) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS)) {
+            setDietRecordParameters(pstmt, record);
+            int resultNum = pstmt.executeUpdate();
+            if (resultNum > 0) {
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        record.setId(generatedKeys.getInt(1));
+                    }
+                }
+                System.out.println("饮食记录插入成功，ID: " + record.getId());
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("饮食记录插入失败: " + e.getMessage());
+            javax.swing.JOptionPane.showMessageDialog(null, "饮食记录插入失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+
+    /**
+     * 更新饮食记录
+     */
+    public static boolean updateDietRecord(model.DietRecord record) {
+        if (record == null || record.getId() == 0) return false;
+        model.DietRecord.ValidationResult result = record.validateRecord();
+        if (!result.isValid()) {
+            System.err.println("数据验证失败: " + result.getMessage());
+            javax.swing.JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", javax.swing.JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        String updateSQL = "UPDATE diet_record SET user_name=?, record_date=?, breakfast=?, lunch=?, dinner=?, notes=? WHERE id=?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(updateSQL)) {
+            setDietRecordParameters(pstmt, record);
+            pstmt.setInt(7, record.getId());
+            int resultNum = pstmt.executeUpdate();
+            if (resultNum > 0) {
+                System.out.println("饮食记录更新成功");
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("饮食记录更新失败: " + e.getMessage());
+            javax.swing.JOptionPane.showMessageDialog(null, "饮食记录更新失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
+    }
+
+    /**
+     * 删除饮食记录
+     */
+    public static boolean deleteDietRecordById(int id) {
+        if (id <= 0) return false;
+        String sql = "DELETE FROM diet_record WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(null, "删除饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+
+    /**
+     * 查询某用户所有饮食记录
+     */
+    public static java.util.List<model.DietRecord> getDietRecordsByUser(String userName) {
+        if (userName == null || userName.trim().isEmpty()) return new java.util.ArrayList<>();
+        java.util.List<model.DietRecord> records = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM diet_record WHERE user_name = ? ORDER BY record_date DESC, id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    records.add(parseDietRecordFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        return records;
+    }
+
+    /**
+     * 查询单条饮食记录
+     */
+    public static model.DietRecord getDietRecordById(int id) {
+        if (id <= 0) return null;
+        String sql = "SELECT * FROM diet_record WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return parseDietRecordFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        return null;
+    }
+
+    /**
+     * 设置饮食记录PreparedStatement参数
+     */
+    private static void setDietRecordParameters(PreparedStatement pstmt, model.DietRecord record) throws SQLException {
+        pstmt.setString(1, record.getUserName());
+        pstmt.setDate(2, java.sql.Date.valueOf(record.getRecordDate()));
+        pstmt.setString(3, record.getBreakfast());
+        pstmt.setString(4, record.getLunch());
+        pstmt.setString(5, record.getDinner());
+        pstmt.setString(6, record.getNotes());
+    }
+
+    /**
+     * 从ResultSet解析DietRecord对象
+     */
+    private static model.DietRecord parseDietRecordFromResultSet(ResultSet rs) throws SQLException {
+        model.DietRecord record = new model.DietRecord();
+        record.setId(rs.getInt("id"));
+        record.setUserName(rs.getString("user_name"));
+        record.setRecordDate(rs.getDate("record_date").toLocalDate());
+        record.setBreakfast(rs.getString("breakfast"));
+        record.setLunch(rs.getString("lunch"));
+        record.setDinner(rs.getString("dinner"));
+        record.setNotes(rs.getString("notes"));
+        Timestamp created = rs.getTimestamp("created_at");
+        if (created != null) record.setCreatedAt(created.toLocalDateTime());
+        Timestamp updated = rs.getTimestamp("updated_at");
+        if (updated != null) record.setUpdatedAt(updated.toLocalDateTime());
+        return record;
+    }
 } 

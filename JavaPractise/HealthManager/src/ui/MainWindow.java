@@ -3,6 +3,7 @@ package ui;
 import ui.panels.UserProfilePanel;
 import ui.panels.DailyRecordPanel;
 import ui.panels.ExercisePlanPanel;
+import ui.panels.DietPanel;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -88,7 +89,7 @@ public class MainWindow extends JFrame {
         tabbedPane.addTab("用户档案", new UserProfilePanel());
         tabbedPane.addTab("每日记录", new DailyRecordPanel());
         tabbedPane.addTab("运动计划", new ExercisePlanPanel());
-        tabbedPane.addTab("饮食管理", createEmptyPanel("饮食管理功能开发中..."));
+        tabbedPane.addTab("饮食管理", new DietPanel());
         tabbedPane.addTab("数据分析", createEmptyPanel("数据分析功能开发中..."));
         
         // 将标签面板添加到窗口
