@@ -105,6 +105,20 @@ public class DatabaseManager {
             "FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE ON UPDATE CASCADE" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运动计划表'";
         
+        String createDietRecordTableSQL = "CREATE TABLE IF NOT EXISTS diet_record (" +
+            "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '主键，自增'," +
+            "user_name VARCHAR(50) NOT NULL COMMENT '用户名，关联user_profile表'," +
+            "record_date DATE NOT NULL COMMENT '饮食记录日期'," +
+            "breakfast TEXT COMMENT '早餐内容（多选食物、其它、无安排）'," +
+            "lunch TEXT COMMENT '午餐内容（多选食物、其它、无安排）'," +
+            "dinner TEXT COMMENT '晚餐内容（多选食物、其它、无安排）'," +
+            "notes TEXT COMMENT '备注'," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+            "INDEX idx_user_date (user_name, record_date)," +
+            "CONSTRAINT fk_diet_user FOREIGN KEY (user_name) REFERENCES user_profile(name) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='饮食记录表';";
+        
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
@@ -114,6 +128,8 @@ public class DatabaseManager {
             System.out.println("每日记录表检查完成");
             stmt.executeUpdate(createExercisePlanTableSQL);
             System.out.println("运动计划表检查完成");
+            stmt.executeUpdate(createDietRecordTableSQL);
+            System.out.println("饮食记录表检查完成");
             
         } catch (SQLException e) {
             System.err.println("数据库表初始化失败: " + e.getMessage());
