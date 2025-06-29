@@ -1127,4 +1127,25 @@ public class DatabaseManager {
             return false;
         }
     }
+
+    /**
+     * 注册新用户时自动创建user_profile档案
+     */
+    public static boolean insertUserProfileForNewUser(String username) {
+        // 只插入用户名，其他字段用默认值
+        String insertSQL = "INSERT INTO user_profile (name, age, gender, height, weight, is_active) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+            pstmt.setString(1, username);
+            pstmt.setInt(2, 18); // 默认年龄
+            pstmt.setString(3, "男"); // 默认性别
+            pstmt.setDouble(4, 170.0); // 默认身高
+            pstmt.setDouble(5, 60.0); // 默认体重
+            pstmt.setBoolean(6, true);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("自动创建用户档案失败: " + e.getMessage());
+            return false;
+        }
+    }
 } 

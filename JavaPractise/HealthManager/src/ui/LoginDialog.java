@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import ui.RegisterDialog;
 
 /**
  * 登录对话框
@@ -17,8 +18,7 @@ public class LoginDialog extends JDialog {
     
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private JButton loginButton;
-    private JButton cancelButton;
+    private JButton loginButton, cancelButton, registerButton;
     private boolean loginSuccess = false;
     
     public LoginDialog() {
@@ -32,24 +32,23 @@ public class LoginDialog extends JDialog {
         setModal(true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setResizable(false);
-        
         // 创建组件
         usernameField = new JTextField(15);
         passwordField = new JPasswordField(15);
         loginButton = new JButton("登录");
         cancelButton = new JButton("取消");
-        
+        registerButton = new JButton("注册");
         // 设置字体
         Font chineseFont = getChineseFont(Font.PLAIN, 14);
         usernameField.setFont(chineseFont);
         passwordField.setFont(chineseFont);
         loginButton.setFont(chineseFont);
         cancelButton.setFont(chineseFont);
+        registerButton.setFont(chineseFont);
     }
     
     private void setupLayout() {
         setLayout(new BorderLayout());
-        
         // 标题面板
         JPanel titlePanel = new JPanel();
         JLabel titleLabel = new JLabel("健康管理系统", JLabel.CENTER);
@@ -57,33 +56,28 @@ public class LoginDialog extends JDialog {
         titleLabel.setForeground(new Color(51, 122, 183));
         titlePanel.add(titleLabel);
         add(titlePanel, BorderLayout.NORTH);
-        
         // 中央输入面板
         JPanel centerPanel = new JPanel(new GridBagLayout());
         centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
-        
         // 用户名
         gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.EAST;
         centerPanel.add(new JLabel("用户名:"), gbc);
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
         centerPanel.add(usernameField, gbc);
-        
         // 密码
         gbc.gridx = 0; gbc.gridy = 1; gbc.anchor = GridBagConstraints.EAST;
         centerPanel.add(new JLabel("密码:"), gbc);
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
         centerPanel.add(passwordField, gbc);
-        
         add(centerPanel, BorderLayout.CENTER);
-        
         // 底部按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        buttonPanel.add(loginButton);
-        buttonPanel.add(cancelButton);
-        add(buttonPanel, BorderLayout.SOUTH);
-        
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnPanel.add(loginButton);
+        btnPanel.add(cancelButton);
+        btnPanel.add(registerButton);
+        add(btnPanel, BorderLayout.SOUTH);
         // 设置窗口大小和位置
         pack();
         setLocationRelativeTo(null);
@@ -106,6 +100,9 @@ public class LoginDialog extends JDialog {
                 dispose();
             }
         });
+        
+        // 注册按钮事件
+        registerButton.addActionListener(e -> onRegister());
         
         // 回车键登录
         KeyAdapter enterKeyListener = new KeyAdapter() {
@@ -163,6 +160,11 @@ public class LoginDialog extends JDialog {
             passwordField.setText("");
             passwordField.requestFocus();
         }
+    }
+    
+    private void onRegister() {
+        RegisterDialog dialog = new RegisterDialog((Frame) this.getOwner());
+        dialog.setVisible(true);
     }
     
     /**
