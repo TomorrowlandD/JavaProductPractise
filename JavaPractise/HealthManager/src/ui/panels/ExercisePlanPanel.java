@@ -16,6 +16,7 @@ import java.util.List;
 /**
  * 运动计划管理面板
  * 提供简约朴素的运动计划制定和管理功能
+ * 升级版本 - 支持实际时长录入和管理
  */
 public class ExercisePlanPanel extends JPanel {
     private static final long serialVersionUID = 1L;
@@ -32,6 +33,7 @@ public class ExercisePlanPanel extends JPanel {
     private JCheckBox[] exerciseTypeChecks;
     private JTextField dateField;
     private JTextField durationField;
+    private JTextField actualDurationField; // 新增：实际时长输入框
     private JComboBox<String> intensityBox;
     private JTextArea notesArea;
     private JButton saveButton;
@@ -102,6 +104,7 @@ public class ExercisePlanPanel extends JPanel {
         }
         dateField = new JTextField(10);
         durationField = new JTextField(5);
+        actualDurationField = new JTextField(5); // 新增：实际时长输入框
         intensityBox = new JComboBox<>(ExercisePlan.INTENSITY_LEVELS);
         notesArea = new JTextArea(2, 20);
         notesArea.setLineWrap(true);
@@ -131,6 +134,7 @@ public class ExercisePlanPanel extends JPanel {
         for (JCheckBox cb : exerciseTypeChecks) cb.setFont(defaultFont);
         dateField.setFont(defaultFont);
         durationField.setFont(defaultFont);
+        actualDurationField.setFont(defaultFont); // 新增
         intensityBox.setFont(defaultFont);
         notesArea.setFont(defaultFont);
         saveButton.setFont(defaultFont);
@@ -138,8 +142,13 @@ public class ExercisePlanPanel extends JPanel {
         
         // 设置提示文本
         dateField.setToolTipText("请输入计划日期 (格式: yyyy-MM-dd)");
-        durationField.setToolTipText("请输入所有运动的总时长 (小时)");
+        durationField.setToolTipText("请输入计划运动时长 (小时)");
+        actualDurationField.setToolTipText("请输入实际运动时长 (小时)，完成后填写");
         notesArea.setToolTipText("可填写备注信息，如各项运动时间分配");
+        
+        // 设置实际时长输入框初始状态
+        actualDurationField.setEnabled(false);
+        actualDurationField.setBackground(Color.LIGHT_GRAY);
     }
     
     /**
@@ -198,234 +207,184 @@ public class ExercisePlanPanel extends JPanel {
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(new TitledBorder("制定新计划"));
-
-        // 第一行：运动类型
-        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        panel.setBorder(new TitledBorder("运动计划制定"));
+        
+        // 运动类型选择
+        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         typePanel.add(new JLabel("运动类型:"));
         typePanel.add(exerciseTypePanel);
         panel.add(typePanel);
-
-        // 第二行：总运动时长
-        JPanel durationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        durationPanel.add(new JLabel("总运动时长:"));
-        durationPanel.add(durationField);
-        durationPanel.add(new JLabel("小时"));
-        panel.add(durationPanel);
-
-        // 第三行：计划日期和运动强度
-        JPanel dateIntensityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        dateIntensityPanel.add(new JLabel("计划日期:"));
-        dateIntensityPanel.add(dateField);
-        dateIntensityPanel.add(Box.createHorizontalStrut(20));
-        dateIntensityPanel.add(new JLabel("运动强度:"));
-        dateIntensityPanel.add(intensityBox);
-        panel.add(dateIntensityPanel);
-
-        // 第四行：备注
-        JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.add(new JLabel("备注:"), BorderLayout.WEST);
-        JScrollPane notesScrollPane = new JScrollPane(notesArea);
-        notesScrollPane.setPreferredSize(new Dimension(0, 60));
-        notesPanel.add(notesScrollPane, BorderLayout.CENTER);
+        
+        // 日期和时长输入
+        JPanel dateTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        dateTimePanel.add(new JLabel("计划日期:"));
+        dateTimePanel.add(dateField);
+        dateTimePanel.add(new JLabel("计划时长:"));
+        dateTimePanel.add(durationField);
+        dateTimePanel.add(new JLabel("小时"));
+        dateTimePanel.add(Box.createHorizontalStrut(20)); // 间距
+        dateTimePanel.add(new JLabel("实际时长:")); // 新增
+        dateTimePanel.add(actualDurationField); // 新增
+        dateTimePanel.add(new JLabel("小时")); // 新增
+        panel.add(dateTimePanel);
+        
+        // 强度选择
+        JPanel intensityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        intensityPanel.add(new JLabel("运动强度:"));
+        intensityPanel.add(intensityBox);
+        panel.add(intensityPanel);
+        
+        // 备注输入
+        JPanel notesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        notesPanel.add(new JLabel("备注:"));
+        notesPanel.add(new JScrollPane(notesArea));
         panel.add(notesPanel);
-
-        // 第五行：保存按钮
-        JPanel savePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        
+        // 保存按钮
+        JPanel savePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         savePanel.add(saveButton);
+        savePanel.add(statusLabel);
         panel.add(savePanel);
-
+        
         return panel;
     }
     
     /**
-     * 设置事件处理
+     * 设置事件处理器
      */
     private void setupEventHandlers() {
-        // 用户选择事件
+        // 用户选择变化
         userComboBox.addActionListener(e -> {
-            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
-            if (selected != null) {
-                statusLabel.setText("已选择用户: " + selected.getName());
-            } else {
-                statusLabel.setText("请选择用户");
-            }
+            if (!checkUnsavedChanges()) return;
             refreshPlanTable();
-        });
-        
-        // 新增计划按钮
-        addPlanButton.addActionListener(e -> clearForm());
-        
-        // 取消编辑按钮
-        cancelEditButton.addActionListener(e -> {
-            clearForm();
-            planTable.clearSelection();
-        });
-        
-        // 删除计划按钮
-        deletePlanButton.addActionListener(e -> {
-            if (editingPlanId != -1) {
-                // 删除当前编辑的计划
-                int result = JOptionPane.showConfirmDialog(this, 
-                    "确定要删除当前编辑的计划吗？", "确认删除", 
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                
-                if (result == JOptionPane.YES_OPTION) {
-                    if (DatabaseManager.deleteExercisePlanById(editingPlanId)) {
-                        JOptionPane.showMessageDialog(this, "计划删除成功！", "删除成功", JOptionPane.INFORMATION_MESSAGE);
-                        clearForm();
-                        refreshPlanTable();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "删除失败，请重试", "删除失败", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "请先选择要删除的计划（点击表格中的某一行）", "提示", JOptionPane.WARNING_MESSAGE);
-            }
-        });
-        
-        // 保存计划按钮
-        saveButton.addActionListener(e -> {
-            saveExercisePlan();
-            refreshPlanTable();
-        });
-        
-        // 日期字段回车键设置今天日期
-        dateField.addActionListener(e -> {
-            if (dateField.getText().trim().isEmpty()) {
-                dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            }
-        });
-        // 新增：表格行点击事件，自动填充表单
-        planTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && planTable.getSelectedRow() != -1) {
-                int row = planTable.getSelectedRow();
-                if (row >= 0 && row < currentPlans.size()) {
-                    // 检查是否有未保存的修改
-                    if (!checkUnsavedChanges()) {
-                        // 用户选择不放弃修改，恢复原来的选中状态
-                        planTable.getSelectionModel().setSelectionInterval(
-                            getRowIndexById(editingPlanId), 
-                            getRowIndexById(editingPlanId)
-                        );
-                        return;
-                    }
-                    
-                    ExercisePlan plan = currentPlans.get(row);
-                    fillFormWithPlan(plan);
-                }
-            }
-        });
-        
-        // 新增：双击表格行切换选中状态
-        planTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    // 双击时取消选中
-                    planTable.clearSelection();
-                    clearForm();
-                }
-            }
-        });
-        
-        // 新增：为表单组件添加变化监听器
-        setupFormChangeListeners();
-        
-        // 新增：点击表单区域取消表格选中
-        addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                // 如果点击的是表单区域（不是表格区域），则取消表格选中
-                if (e.getSource() == ExercisePlanPanel.this || 
-                    e.getSource() instanceof JPanel || 
-                    e.getSource() instanceof JTextField || 
-                    e.getSource() instanceof JTextArea || 
-                    e.getSource() instanceof JComboBox ||
-                    e.getSource() instanceof JCheckBox) {
-                    planTable.clearSelection();
-                    clearForm();
-                }
-            }
         });
         
         // 刷新按钮
         refreshBtn.addActionListener(e -> {
-            UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
-            String selectedName = selected != null ? selected.getName() : null;
-            userComboBox.removeAllItems();
-            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-            for (UserProfile user : userList) {
-                userComboBox.addItem(user);
-            }
-            if (selectedName != null) {
-                for (int i = 0; i < userComboBox.getItemCount(); i++) {
-                    UserProfile user = userComboBox.getItemAt(i);
-                    if (user.getName().equals(selectedName)) {
-                        userComboBox.setSelectedIndex(i);
-                        break;
-                    }
-                }
-            } else if (userComboBox.getItemCount() > 0) {
-                // 如果没有之前选中的用户，选择第一个
-                userComboBox.setSelectedIndex(0);
-            }
-            // 刷新表格数据
+            refreshUserComboBox();
             refreshPlanTable();
         });
+        
+        // 新增计划按钮
+        addPlanButton.addActionListener(e -> {
+            if (!checkUnsavedChanges()) return;
+            clearForm();
+            editingPlanId = -1;
+            saveButton.setText("保存计划");
+            statusLabel.setText("请填写新的运动计划");
+        });
+        
+        // 删除计划按钮
+        deletePlanButton.addActionListener(e -> {
+            int selectedRow = planTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "请先选择要删除的计划", "提示", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            ExercisePlan plan = currentPlans.get(selectedRow);
+            int result = JOptionPane.showConfirmDialog(this,
+                    String.format("确定要删除计划 \"%s\" 吗？", plan.getExerciseType()),
+                    "确认删除",
+                    JOptionPane.YES_NO_OPTION);
+            
+            if (result == JOptionPane.YES_OPTION) {
+                if (DatabaseManager.deleteExercisePlanById(plan.getId())) {
+                    statusLabel.setText("计划删除成功");
+                    refreshPlanTable();
+                    clearForm();
+                    editingPlanId = -1;
+                } else {
+                    JOptionPane.showMessageDialog(this, "删除计划失败", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
+        // 取消编辑按钮
+        cancelEditButton.addActionListener(e -> {
+            if (checkUnsavedChanges()) {
+                clearForm();
+                editingPlanId = -1;
+                saveButton.setText("保存计划");
+                statusLabel.setText("已取消编辑");
+            }
+        });
+        
+        // 保存按钮
+        saveButton.addActionListener(e -> saveExercisePlan());
+        
+        // 表格双击编辑
+        planTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int selectedRow = planTable.getSelectedRow();
+                    if (selectedRow != -1 && checkUnsavedChanges()) {
+                        ExercisePlan plan = currentPlans.get(selectedRow);
+                        fillFormWithPlan(plan);
+                    }
+                }
+            }
+        });
+        
+        // 表格单击选择
+        planTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 1) {
+                    int selectedRow = planTable.getSelectedRow();
+                    if (selectedRow != -1) {
+                        ExercisePlan plan = currentPlans.get(selectedRow);
+                        statusLabel.setText(String.format("选中计划: %s (%s)", 
+                            plan.getExerciseType(), plan.getPlanDateString()));
+                    }
+                }
+            }
+        });
+        
+        // 添加表单变化监听
+        setupFormChangeListeners();
     }
     
     /**
      * 设置默认值
      */
     private void setupDefaults() {
-        // 设置默认日期为今天
-        dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        
-        // 设置默认时长
-        durationField.setText("1.0");
+        // 设置当前日期
+        LocalDate today = LocalDate.now();
+        dateField.setText(today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         
         // 设置默认强度
         intensityBox.setSelectedItem("中");
         
-        // 设置默认备注
-        notesArea.setText("无特殊备注");
+        // 设置默认时长
+        durationField.setText("1.0");
     }
     
     /**
      * 刷新用户下拉框
      */
     private void refreshUserComboBox() {
-        // 保存当前选中的用户
-        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
-        String selectedUserName = selectedUser != null ? selectedUser.getName() : null;
+        UserProfile currentSelected = (UserProfile) userComboBox.getSelectedItem();
+        userComboBox.removeAllItems();
         
-        // 刷新用户列表
-        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+        List<UserProfile> profiles = DatabaseManager.getAllUserProfiles();
+        for (UserProfile profile : profiles) {
+            userComboBox.addItem(profile);
+        }
         
-        // 恢复选中状态
-        if (selectedUserName != null) {
+        // 如果之前有选中的用户，尝试重新选中
+        if (currentSelected != null) {
             for (int i = 0; i < userComboBox.getItemCount(); i++) {
-                UserProfile user = userComboBox.getItemAt(i);
-                if (user.getName().equals(selectedUserName)) {
+                UserProfile profile = userComboBox.getItemAt(i);
+                if (profile.getName().equals(currentSelected.getName())) {
                     userComboBox.setSelectedIndex(i);
                     break;
                 }
             }
-        } else if (!userList.isEmpty()) {
-            // 如果没有之前选中的用户，选择第一个
-            userComboBox.setSelectedIndex(0);
         }
         
-        // 更新状态标签
-        if (userList.isEmpty()) {
-            statusLabel.setText("暂无用户，请先在用户档案中添加用户");
-        } else {
-            statusLabel.setText("请选择用户制定运动计划");
-        }
-        
-        // 刷新表格数据
+        // 刷新表格
         refreshPlanTable();
     }
     
@@ -433,18 +392,22 @@ public class ExercisePlanPanel extends JPanel {
      * 清空表单
      */
     private void clearForm() {
-        for (JCheckBox cb : exerciseTypeChecks) cb.setSelected(false);
-        dateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        for (JCheckBox cb : exerciseTypeChecks) {
+            cb.setSelected(false);
+        }
+        
+        LocalDate today = LocalDate.now();
+        dateField.setText(today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         durationField.setText("1.0");
+        actualDurationField.setText(""); // 新增：清空实际时长
         intensityBox.setSelectedItem("中");
-        notesArea.setText("无特殊备注");
-        statusLabel.setText("表单已清空，请填写新计划");
-        // 新增：重置编辑ID，恢复为新增模式
+        notesArea.setText("");
+        
+        // 重置实际时长输入框状态
+        actualDurationField.setEnabled(false);
+        actualDurationField.setBackground(Color.LIGHT_GRAY);
+        
         editingPlanId = -1;
-        saveButton.setText("保存计划");
-        // 新增：清除表格选中状态
-        planTable.clearSelection();
-        // 新增：重置修改标记和原始数据
         hasUnsavedChanges = false;
         originalPlan = null;
     }
@@ -453,147 +416,164 @@ public class ExercisePlanPanel extends JPanel {
      * 保存运动计划
      */
     private void saveExercisePlan() {
-        try {
-            // 获取选中的用户
-            UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
-            if (selectedUser == null) {
-                JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-            // 创建运动计划对象
-            ExercisePlan plan = new ExercisePlan();
-            plan.setUserName(selectedUser.getName());
-            
-            // 如果是编辑模式，设置ID
-            if (editingPlanId != -1) {
-                plan.setId(editingPlanId);
-            }
-            
-            // 多选运动类型
-            StringBuilder types = new StringBuilder();
-            for (JCheckBox cb : exerciseTypeChecks) {
-                if (cb.isSelected()) {
-                    if (types.length() > 0) types.append(",");
-                    types.append(cb.getText());
+        // 验证用户选择
+        UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
+        if (selectedUser == null) {
+            JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // 验证运动类型
+        StringBuilder exerciseTypes = new StringBuilder();
+        for (JCheckBox cb : exerciseTypeChecks) {
+            if (cb.isSelected()) {
+                if (exerciseTypes.length() > 0) {
+                    exerciseTypes.append(", ");
                 }
+                exerciseTypes.append(cb.getText());
             }
-            if (types.length() == 0) {
-                JOptionPane.showMessageDialog(this, "请至少选择一种运动类型", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+        
+        if (exerciseTypes.length() == 0) {
+            JOptionPane.showMessageDialog(this, "请选择至少一种运动类型", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // 验证日期
+        String dateStr = dateField.getText().trim();
+        if (dateStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请输入计划日期", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        LocalDate planDate;
+        try {
+            planDate = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // 验证计划时长
+        String durationStr = durationField.getText().trim();
+        if (durationStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请输入计划时长", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        Double duration;
+        try {
+            duration = Double.parseDouble(durationStr);
+            if (duration <= 0 || duration > 24) {
+                JOptionPane.showMessageDialog(this, "计划时长必须在0-24小时之间", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            plan.setExerciseType(types.toString());
-            
-            // 解析日期
-            String dateText = dateField.getText().trim();
-            if (dateText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入计划日期", "提示", JOptionPane.WARNING_MESSAGE);
-                dateField.requestFocus();
-                return;
-            }
-            LocalDate planDate;
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "计划时长格式错误，请输入数字", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // 验证实际时长（如果有输入）
+        Double actualDuration = null;
+        String actualDurationStr = actualDurationField.getText().trim();
+        if (!actualDurationStr.isEmpty()) {
             try {
-                planDate = LocalDate.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                plan.setPlanDate(planDate);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", "提示", JOptionPane.WARNING_MESSAGE);
-                dateField.requestFocus();
-                return;
-            }
-            // 唯一性校验：同一用户同一天只能有一条计划，编辑时排除自身
-            List<ExercisePlan> plans = DatabaseManager.getExercisePlansByUser(selectedUser.getName());
-            boolean exists = plans.stream().anyMatch(p ->
-                p.getPlanDate().equals(planDate)
-                && (editingPlanId == -1 || p.getId() != editingPlanId)
-            );
-            if (exists) {
-                JOptionPane.showMessageDialog(this, "该用户该日期已存在运动计划，请勿重复添加", "提示", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-            // 解析时长（必填校验）
-            String durationText = durationField.getText().trim();
-            if (durationText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入总运动时长", "提示", JOptionPane.WARNING_MESSAGE);
-                durationField.requestFocus();
-                return;
-            }
-            try {
-                double duration = Double.parseDouble(durationText);
-                if (duration <= 0 || duration > 24) {
-                    JOptionPane.showMessageDialog(this, "运动时长必须在0-24小时之间", "提示", JOptionPane.WARNING_MESSAGE);
-                    durationField.requestFocus();
+                actualDuration = Double.parseDouble(actualDurationStr);
+                if (actualDuration < 0 || actualDuration > 24) {
+                    JOptionPane.showMessageDialog(this, "实际时长必须在0-24小时之间", "提示", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                plan.setDuration(duration);
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "请输入有效的运动时长", "提示", JOptionPane.WARNING_MESSAGE);
-                durationField.requestFocus();
-                return;
-            }
-            
-            // 设置其他字段
-            plan.setIntensity((String) intensityBox.getSelectedItem());
-            plan.setNotes(notesArea.getText().trim());
-            
-            // 验证计划
-            ExercisePlan.ValidationResult result = plan.validatePlan();
-            if (!result.isValid()) {
-                JOptionPane.showMessageDialog(this, "数据验证失败：" + result.getMessage(), "提示", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-            // 根据编辑状态选择保存或更新
-            boolean success = false;
-            String operationType = "";
-            
-            if (editingPlanId != -1) {
-                // 编辑模式：更新现有计划
-                success = DatabaseManager.updateExercisePlan(plan);
-                operationType = "修改";
-            } else {
-                // 新增模式：插入新计划
-                success = DatabaseManager.insertExercisePlan(plan);
-                operationType = "保存";
-            }
-            
-            if (success) {
-                JOptionPane.showMessageDialog(this, 
-                    "运动计划" + operationType + "成功！\n\n" +
-                    "用户：" + plan.getUserName() + "\n" +
-                    "运动：" + plan.getExerciseType() + "\n" +
-                    "日期：" + plan.getPlanDateString() + "\n" +
-                    "时长：" + plan.getDurationString(), 
-                    operationType + "成功", JOptionPane.INFORMATION_MESSAGE);
                 
-                clearForm();
-                statusLabel.setText("计划已" + operationType + "，可继续制定新计划");
-                // 新增：重置修改标记
-                hasUnsavedChanges = false;
-            } else {
-                JOptionPane.showMessageDialog(this, operationType + "失败，请检查数据", "错误", JOptionPane.ERROR_MESSAGE);
+                // 新增：业务逻辑验证 - 实际时长应该大于等于计划时长
+                if (actualDuration < duration) {
+                    int result = JOptionPane.showConfirmDialog(this,
+                        String.format("实际时长(%.1f小时)小于计划时长(%.1f小时)，\n这可能表示运动计划未完全完成。\n\n确定要保存吗？", 
+                            actualDuration, duration),
+                        "实际时长验证",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE);
+                    
+                    if (result != JOptionPane.YES_OPTION) {
+                        actualDurationField.requestFocus();
+                        return;
+                    }
+                }
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "实际时长格式错误，请输入数字", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
             }
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "保存失败：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+        }
+        
+        // 创建或更新计划对象
+        ExercisePlan plan = new ExercisePlan();
+        if (editingPlanId != -1) {
+            plan.setId(editingPlanId);
+        }
+        plan.setUserName(selectedUser.getName());
+        plan.setExerciseType(exerciseTypes.toString());
+        plan.setPlanDate(planDate);
+        plan.setDuration(duration);
+        plan.setActualDuration(actualDuration); // 新增：设置实际时长
+        plan.setIntensity((String) intensityBox.getSelectedItem());
+        plan.setNotes(notesArea.getText().trim());
+        
+        // 如果有实际时长，自动标记为完成
+        if (actualDuration != null && actualDuration > 0) {
+            plan.setCompleted(true);
+        }
+        
+        // 保存到数据库
+        boolean success;
+        if (editingPlanId == -1) {
+            success = DatabaseManager.insertExercisePlan(plan);
+        } else {
+            success = DatabaseManager.updateExercisePlan(plan);
+        }
+        
+        if (success) {
+            statusLabel.setText(editingPlanId == -1 ? "运动计划保存成功" : "运动计划更新成功");
+            clearForm();
+            refreshPlanTable();
+            hasUnsavedChanges = false;
+        } else {
+            JOptionPane.showMessageDialog(this, "保存计划失败", "错误", JOptionPane.ERROR_MESSAGE);
         }
     }
     
-    // 新增：将计划数据填充到表单（编辑模式）
+    /**
+     * 用计划数据填充表单
+     */
     private void fillFormWithPlan(ExercisePlan plan) {
-        // 运动类型多选
-        String[] types = plan.getExerciseType().split(",");
+        // 清空并设置运动类型
         for (JCheckBox cb : exerciseTypeChecks) {
             cb.setSelected(false);
-            for (String t : types) {
-                if (cb.getText().equals(t.trim())) {
+        }
+        
+        String[] types = plan.getExerciseType().split(", ");
+        for (String type : types) {
+            for (JCheckBox cb : exerciseTypeChecks) {
+                if (cb.getText().equals(type.trim())) {
                     cb.setSelected(true);
+                    break;
                 }
             }
         }
-        // 其他字段
-        dateField.setText(plan.getPlanDateString());
-        durationField.setText(plan.getDuration() != null ? String.valueOf(plan.getDuration()) : "");
+        
+        // 设置其他字段
+        dateField.setText(plan.getPlanDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        durationField.setText(plan.getDuration() != null ? plan.getDuration().toString() : "");
+        
+        // 新增：设置实际时长
+        if (plan.getActualDuration() != null) {
+            actualDurationField.setText(plan.getActualDuration().toString());
+            actualDurationField.setEnabled(true);
+            actualDurationField.setBackground(Color.WHITE);
+        } else {
+            actualDurationField.setText("");
+            actualDurationField.setEnabled(plan.isCompleted()); // 如果已完成，允许编辑实际时长
+            actualDurationField.setBackground(plan.isCompleted() ? Color.WHITE : Color.LIGHT_GRAY);
+        }
+        
         intensityBox.setSelectedItem(plan.getIntensity());
         notesArea.setText(plan.getNotes() != null ? plan.getNotes() : "");
         // 设置编辑ID
@@ -608,15 +588,16 @@ public class ExercisePlanPanel extends JPanel {
         originalPlan.setExerciseType(plan.getExerciseType());
         originalPlan.setPlanDate(plan.getPlanDate());
         originalPlan.setDuration(plan.getDuration());
+        originalPlan.setActualDuration(plan.getActualDuration()); // 新增
         originalPlan.setIntensity(plan.getIntensity());
         originalPlan.setNotes(plan.getNotes());
         originalPlan.setCompleted(plan.isCompleted());
         hasUnsavedChanges = false;
     }
     
-    // 3. TableModel内部类
+    // 3. TableModel内部类 - 升级版本
     private class PlanTableModel extends javax.swing.table.AbstractTableModel {
-        private final String[] columns = {"日期", "类型", "总时长", "强度", "备注", "完成"};
+        private final String[] columns = {"日期", "类型", "计划时长", "实际时长", "强度", "备注", "完成"};
         @Override public int getRowCount() { return currentPlans.size(); }
         @Override public int getColumnCount() { return columns.length; }
         @Override public String getColumnName(int col) { return columns[col]; }
@@ -626,24 +607,66 @@ public class ExercisePlanPanel extends JPanel {
                 case 0: return plan.getPlanDateString();
                 case 1: return plan.getExerciseType();
                 case 2: return plan.getDurationString();
-                case 3: return plan.getIntensity();
-                case 4: return plan.getNotes();
-                case 5: return plan.isCompleted();
+                case 3: return plan.getActualDurationString(); // 新增：实际时长列
+                case 4: return plan.getIntensity();
+                case 5: return plan.getNotes();
+                case 6: return plan.isCompleted(); // 调整索引
                 default: return "";
             }
         }
         @Override public Class<?> getColumnClass(int col) {
-            if (col == 5) return Boolean.class;
+            if (col == 6) return Boolean.class; // 调整完成状态列索引
             return String.class;
         }
         @Override public boolean isCellEditable(int row, int col) {
-            return col == 5; // 只有完成状态列可编辑
+            return col == 6; // 只有完成状态列可编辑（调整索引）
         }
         @Override public void setValueAt(Object value, int row, int col) {
-            if (col == 5 && row >= 0 && row < currentPlans.size()) {
+            if (col == 6 && row >= 0 && row < currentPlans.size()) { // 调整完成状态列索引
                 ExercisePlan plan = currentPlans.get(row);
                 boolean newValue = (Boolean) value;
                 if (plan.isCompleted() != newValue) {
+                    // 新增：如果标记为完成且没有实际时长，提示输入
+                    if (newValue && plan.getActualDuration() == null) {
+                        String actualDurationStr = JOptionPane.showInputDialog(
+                            ExercisePlanPanel.this,
+                            "请输入实际运动时长（小时）：",
+                            "录入实际时长",
+                            JOptionPane.QUESTION_MESSAGE
+                        );
+                        
+                        if (actualDurationStr != null && !actualDurationStr.trim().isEmpty()) {
+                            try {
+                                Double actualDuration = Double.parseDouble(actualDurationStr.trim());
+                                if (actualDuration >= 0 && actualDuration <= 24) {
+                                    // 新增：业务逻辑验证 - 实际时长应该大于等于计划时长
+                                    Double plannedDuration = plan.getDuration();
+                                    if (plannedDuration != null && actualDuration < plannedDuration) {
+                                        int result = JOptionPane.showConfirmDialog(ExercisePlanPanel.this,
+                                            String.format("实际时长(%.1f小时)小于计划时长(%.1f小时)，\n这可能表示运动计划未完全完成。\n\n确定要标记为完成吗？", 
+                                                actualDuration, plannedDuration),
+                                            "实际时长验证",
+                                            JOptionPane.YES_NO_OPTION,
+                                            JOptionPane.QUESTION_MESSAGE);
+                                        
+                                        if (result != JOptionPane.YES_OPTION) {
+                                            return; // 不更新完成状态
+                                        }
+                                    }
+                                    plan.setActualDuration(actualDuration);
+                                } else {
+                                    JOptionPane.showMessageDialog(ExercisePlanPanel.this,
+                                        "实际时长必须在0-24小时之间", "输入错误", JOptionPane.WARNING_MESSAGE);
+                                    return; // 不更新完成状态
+                                }
+                            } catch (NumberFormatException e) {
+                                JOptionPane.showMessageDialog(ExercisePlanPanel.this,
+                                    "请输入有效的数字", "输入错误", JOptionPane.WARNING_MESSAGE);
+                                return; // 不更新完成状态
+                            }
+                        }
+                    }
+                    
                     plan.setCompleted(newValue);
                     // 立即更新数据库
                     if (DatabaseManager.updateExercisePlan(plan)) {
@@ -651,6 +674,7 @@ public class ExercisePlanPanel extends JPanel {
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             statusLabel.setText("完成状态已更新");
                             updateStatsLabel(); // 更新统计信息
+                            fireTableDataChanged(); // 刷新整个表格以显示实际时长变化
                         });
                     } else {
                         // 更新失败，恢复原状态
@@ -677,14 +701,22 @@ public class ExercisePlanPanel extends JPanel {
         planTableModel.fireTableDataChanged();
         updateStatsLabel();
     }
+    
     private void updateStatsLabel() {
         int total = currentPlans.size();
         int completed = 0;
+        double totalPlannedHours = 0.0;
+        double totalActualHours = 0.0;
+        
         for (ExercisePlan plan : currentPlans) {
             if (plan.isCompleted()) completed++;
+            if (plan.getDuration() != null) totalPlannedHours += plan.getDuration();
+            if (plan.getActualDuration() != null) totalActualHours += plan.getActualDuration();
         }
+        
         String rate = total > 0 ? String.format("%.0f%%", completed * 100.0 / total) : "0%";
-        statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s", total, completed, rate));
+        statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s | 计划时长%.1f小时，实际时长%.1f小时", 
+            total, completed, rate, totalPlannedHours, totalActualHours));
     }
     
     /**
@@ -703,8 +735,15 @@ public class ExercisePlanPanel extends JPanel {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
         });
         
-        // 时长字段变化监听
+        // 计划时长字段变化监听
         durationField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
+        });
+        
+        // 新增：实际时长字段变化监听
+        actualDurationField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
             public void insertUpdate(javax.swing.event.DocumentEvent e) { markFormChanged(); }
@@ -760,37 +799,18 @@ public class ExercisePlanPanel extends JPanel {
     
     // 新增：为完成状态列设置复选框编辑器
     private void setupCompletionColumnEditor() {
-        // 为第5列（完成状态列）设置复选框编辑器
-        planTable.getColumnModel().getColumn(5).setCellEditor(
+        // 为第6列（完成状态列）设置复选框编辑器（调整索引）
+        planTable.getColumnModel().getColumn(6).setCellEditor(
             new javax.swing.DefaultCellEditor(new JCheckBox())
         );
         
-        // 添加表格数据变化监听器
-        planTableModel.addTableModelListener(e -> {
-            if (e.getColumn() == 5) { // 完成状态列
-                int row = e.getFirstRow();
-                if (row >= 0 && row < currentPlans.size()) {
-                    ExercisePlan plan = currentPlans.get(row);
-                    boolean newCompleted = (Boolean) planTableModel.getValueAt(row, 5);
-                    
-                    // 如果完成状态发生变化，更新数据库
-                    if (plan.isCompleted() != newCompleted) {
-                        plan.setCompleted(newCompleted);
-                        if (DatabaseManager.updateExercisePlan(plan)) {
-                            statusLabel.setText("完成状态已更新");
-                            updateStatsLabel(); // 更新统计信息
-                        } else {
-                            // 更新失败，恢复原状态
-                            plan.setCompleted(!newCompleted);
-                            planTableModel.fireTableCellUpdated(row, 5); // 刷新表格显示
-                            javax.swing.SwingUtilities.invokeLater(() -> {
-                                JOptionPane.showMessageDialog(ExercisePlanPanel.this, 
-                                    "更新完成状态失败，请重试", "更新失败", JOptionPane.ERROR_MESSAGE);
-                            });
-                        }
-                    }
-                }
-            }
-        });
+        // 设置列宽
+        planTable.getColumnModel().getColumn(0).setPreferredWidth(80);  // 日期
+        planTable.getColumnModel().getColumn(1).setPreferredWidth(120); // 类型
+        planTable.getColumnModel().getColumn(2).setPreferredWidth(80);  // 计划时长
+        planTable.getColumnModel().getColumn(3).setPreferredWidth(80);  // 实际时长
+        planTable.getColumnModel().getColumn(4).setPreferredWidth(60);  // 强度
+        planTable.getColumnModel().getColumn(5).setPreferredWidth(150); // 备注
+        planTable.getColumnModel().getColumn(6).setPreferredWidth(60);  // 完成
     }
 } 
