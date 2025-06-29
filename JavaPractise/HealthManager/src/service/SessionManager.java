@@ -18,10 +18,8 @@ public class SessionManager {
         User user = DatabaseManager.authenticateUser(username, password);
         if (user != null && user.isActive()) {
             currentUser = user;
-            // 如果用户有关联的档案，加载档案信息
-            if (user.getProfileName() != null) {
-                currentProfile = DatabaseManager.getUserProfileByName(user.getProfileName());
-            }
+            // 无论profileName是否为null，都用用户名查档案
+            currentProfile = DatabaseManager.getUserProfileByName(user.getUsername());
             System.out.println("用户登录成功: " + username);
             return true;
         }

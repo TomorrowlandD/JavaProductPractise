@@ -92,6 +92,8 @@ public class RegisterDialog extends JDialog {
         if (success) {
             // 自动创建档案
             boolean profileSuccess = DatabaseManager.insertUserProfileForNewUser(username);
+            // 新增：写回users表的profileName字段
+            DatabaseManager.updateUserProfileLink(username, username);
             if (profileSuccess) {
                 JOptionPane.showMessageDialog(this, "注册成功！请使用新账户登录。", "注册成功", JOptionPane.INFORMATION_MESSAGE);
                 registerSuccess = true;

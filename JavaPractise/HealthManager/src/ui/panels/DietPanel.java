@@ -301,20 +301,12 @@ public class DietPanel extends JPanel {
     }
 
     private void refreshUserComboBox() {
-        // 保存当前选中的用户
         UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
         String selectedUserName = selectedUser != null ? selectedUser.getName() : null;
-        
-        // 刷新用户列表
         if (service.SessionManager.isAdmin()) {
-            // 管理员可以看到所有用户
             List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
             userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
-            
-            // 管理员界面显示用户选择功能
-            userComboBox.setVisible(true);
-            
-            // 恢复选中状态
+            userComboBox.setEnabled(true);
             if (selectedUserName != null) {
                 for (int i = 0; i < userComboBox.getItemCount(); i++) {
                     UserProfile user = userComboBox.getItemAt(i);
@@ -324,26 +316,21 @@ public class DietPanel extends JPanel {
                     }
                 }
             } else if (!userList.isEmpty()) {
-                // 如果没有之前选中的用户，选择第一个
                 userComboBox.setSelectedIndex(0);
             }
         } else {
-            // 普通用户只能看到自己的数据
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
                 List<UserProfile> userList = new java.util.ArrayList<>();
                 userList.add(currentUserProfile);
                 userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
                 userComboBox.setSelectedItem(currentUserProfile);
-                
-                // 普通用户界面隐藏用户选择功能
-                userComboBox.setVisible(false);
+                userComboBox.setEnabled(false);
             } else {
                 userComboBox.setModel(new DefaultComboBoxModel<>(new UserProfile[0]));
+                userComboBox.setEnabled(false);
             }
         }
-        
-        // 刷新表格数据
         if (userComboBox.getItemCount() > 0) {
             refreshDietTable();
         } else {

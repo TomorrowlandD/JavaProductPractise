@@ -48,16 +48,17 @@ public class DataAnalysisPanel extends JPanel {
         // 用户选择下拉框和刷新按钮
         JComboBox<UserProfile> userComboBox;
         if (service.SessionManager.isAdmin()) {
-            // 管理员可以看到所有用户
             userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+            userComboBox.setEnabled(true);
         } else {
-            // 普通用户只能看到自己的数据
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
                 userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
                 userComboBox.setSelectedItem(currentUserProfile);
+                userComboBox.setEnabled(false);
             } else {
                 userComboBox = new JComboBox<>(new UserProfile[0]);
+                userComboBox.setEnabled(false);
             }
         }
         
@@ -66,12 +67,6 @@ public class DataAnalysisPanel extends JPanel {
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
-        
-        // 根据用户角色控制界面显示
-        if (!service.SessionManager.isAdmin()) {
-            userComboBox.setVisible(false);
-            topPanel.remove(userComboBox);
-        }
         
         panel.add(topPanel, BorderLayout.NORTH);
 
@@ -215,16 +210,17 @@ public class DataAnalysisPanel extends JPanel {
         // 用户选择下拉框和刷新按钮
         JComboBox<UserProfile> userComboBox;
         if (service.SessionManager.isAdmin()) {
-            // 管理员可以看到所有用户
             userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+            userComboBox.setEnabled(true);
         } else {
-            // 普通用户只能看到自己的数据
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
                 userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
                 userComboBox.setSelectedItem(currentUserProfile);
+                userComboBox.setEnabled(false);
             } else {
                 userComboBox = new JComboBox<>(new UserProfile[0]);
+                userComboBox.setEnabled(false);
             }
         }
         
@@ -233,12 +229,6 @@ public class DataAnalysisPanel extends JPanel {
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
-        
-        // 根据用户角色控制界面显示
-        if (!service.SessionManager.isAdmin()) {
-            userComboBox.setVisible(false);
-            topPanel.remove(userComboBox);
-        }
         
         panel.add(topPanel, BorderLayout.NORTH);
 
@@ -341,16 +331,17 @@ public class DataAnalysisPanel extends JPanel {
         // 用户选择下拉框和刷新按钮
         JComboBox<UserProfile> userComboBox;
         if (service.SessionManager.isAdmin()) {
-            // 管理员可以看到所有用户
             userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+            userComboBox.setEnabled(true);
         } else {
-            // 普通用户只能看到自己的数据
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
                 userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
                 userComboBox.setSelectedItem(currentUserProfile);
+                userComboBox.setEnabled(false);
             } else {
                 userComboBox = new JComboBox<>(new UserProfile[0]);
+                userComboBox.setEnabled(false);
             }
         }
         
@@ -359,12 +350,6 @@ public class DataAnalysisPanel extends JPanel {
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
-        
-        // 根据用户角色控制界面显示
-        if (!service.SessionManager.isAdmin()) {
-            userComboBox.setVisible(false);
-            topPanel.remove(userComboBox);
-        }
         
         panel.add(topPanel, BorderLayout.NORTH);
 

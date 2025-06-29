@@ -1140,29 +1140,30 @@ public class UserProfilePanel extends JPanel {
      */
     private void refreshUserComboBox() {
         if (service.SessionManager.isAdmin()) {
-            // 管理员可以看到所有用户
             userList = service.DatabaseManager.getAllUserProfiles();
             userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            userComboBox.setEnabled(true);
             userComboBox.setVisible(true);
             addButton.setVisible(true);
             deleteButton.setVisible(true);
             resetPasswordButton.setVisible(true);
         } else {
-            // 普通用户只能看到自己的档案
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
                 userList = new java.util.ArrayList<>();
                 userList.add(currentUserProfile);
-                userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+                userComboBox.setModel(new DefaultComboBoxModel<>(new UserProfile[]{currentUserProfile}));
                 userComboBox.setSelectedItem(currentUserProfile);
-                userComboBox.setVisible(false);
+                userComboBox.setEnabled(false);
+                userComboBox.setVisible(true);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
                 resetPasswordButton.setVisible(false);
             } else {
                 userList = new java.util.ArrayList<>();
                 userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
-                userComboBox.setVisible(false);
+                userComboBox.setEnabled(false);
+                userComboBox.setVisible(true);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
                 resetPasswordButton.setVisible(false);
