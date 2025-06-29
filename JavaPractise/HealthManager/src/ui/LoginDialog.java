@@ -8,6 +8,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import ui.RegisterDialog;
+import ui.UserChangePasswordDialog;
+import ui.UserDeleteAccountDialog;
 
 /**
  * 登录对话框
@@ -18,7 +20,7 @@ public class LoginDialog extends JDialog {
     
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private JButton loginButton, cancelButton, registerButton;
+    private JButton loginButton, cancelButton, registerButton, changePasswordButton, deleteAccountButton;
     private boolean loginSuccess = false;
     
     public LoginDialog() {
@@ -38,6 +40,8 @@ public class LoginDialog extends JDialog {
         loginButton = new JButton("登录");
         cancelButton = new JButton("取消");
         registerButton = new JButton("注册");
+        changePasswordButton = new JButton("修改密码");
+        deleteAccountButton = new JButton("注销账号");
         // 设置字体
         Font chineseFont = getChineseFont(Font.PLAIN, 14);
         usernameField.setFont(chineseFont);
@@ -45,6 +49,8 @@ public class LoginDialog extends JDialog {
         loginButton.setFont(chineseFont);
         cancelButton.setFont(chineseFont);
         registerButton.setFont(chineseFont);
+        changePasswordButton.setFont(chineseFont);
+        deleteAccountButton.setFont(chineseFont);
     }
     
     private void setupLayout() {
@@ -77,6 +83,8 @@ public class LoginDialog extends JDialog {
         btnPanel.add(loginButton);
         btnPanel.add(cancelButton);
         btnPanel.add(registerButton);
+        btnPanel.add(changePasswordButton);
+        btnPanel.add(deleteAccountButton);
         add(btnPanel, BorderLayout.SOUTH);
         // 设置窗口大小和位置
         pack();
@@ -103,6 +111,12 @@ public class LoginDialog extends JDialog {
         
         // 注册按钮事件
         registerButton.addActionListener(e -> onRegister());
+        
+        // 修改密码按钮事件
+        changePasswordButton.addActionListener(e -> onChangePassword());
+        
+        // 注销账号按钮事件
+        deleteAccountButton.addActionListener(e -> onDeleteAccount());
         
         // 回车键登录
         KeyAdapter enterKeyListener = new KeyAdapter() {
@@ -164,6 +178,16 @@ public class LoginDialog extends JDialog {
     
     private void onRegister() {
         RegisterDialog dialog = new RegisterDialog((Frame) this.getOwner());
+        dialog.setVisible(true);
+    }
+    
+    private void onChangePassword() {
+        UserChangePasswordDialog dialog = new UserChangePasswordDialog((Frame) this.getOwner());
+        dialog.setVisible(true);
+    }
+    
+    private void onDeleteAccount() {
+        UserDeleteAccountDialog dialog = new UserDeleteAccountDialog((Frame) this.getOwner());
         dialog.setVisible(true);
     }
     

@@ -9,6 +9,7 @@ import java.awt.event.KeyEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import ui.AddUserDialog;
+import ui.ResetPasswordDialog;
 
 /**
  * 用户档案界面面板
@@ -52,6 +53,7 @@ public class UserProfilePanel extends JPanel {
     private JButton calculateButton;
     private JButton clearButton;
     private JButton reportButton;
+    private JButton resetPasswordButton;
     
     // 状态信息
     private JLabel lastUpdatedLabel;
@@ -122,6 +124,7 @@ public class UserProfilePanel extends JPanel {
         calculateButton = new JButton("重新计算");
         clearButton = new JButton("清空");
         reportButton = new JButton("查看报告");
+        resetPasswordButton = new JButton("重置密码");
         
         // 状态信息
         lastUpdatedLabel = new JLabel("最后更新: --");
@@ -183,6 +186,7 @@ public class UserProfilePanel extends JPanel {
         calculateButton.setFont(defaultFont);
         clearButton.setFont(defaultFont);
         reportButton.setFont(defaultFont);
+        resetPasswordButton.setFont(defaultFont);
         
         // 进度条样式
         progressBar.setFont(getChineseFont(Font.PLAIN, 10));
@@ -207,6 +211,7 @@ public class UserProfilePanel extends JPanel {
         topPanel.add(userComboBox);
         topPanel.add(addButton);
         topPanel.add(deleteButton);
+        topPanel.add(resetPasswordButton);
         add(topPanel, BorderLayout.NORTH);
         
         JPanel mainPanel = new JPanel(new GridBagLayout());
@@ -477,6 +482,7 @@ public class UserProfilePanel extends JPanel {
         calculateButton.addActionListener(e -> calculateAll());
         clearButton.addActionListener(e -> clearAll(true));
         reportButton.addActionListener(e -> showReport());
+        resetPasswordButton.addActionListener(e -> onResetPassword());
         
         // 1. 添加多用户相关事件
         userComboBox.addActionListener(e -> {
@@ -1140,6 +1146,7 @@ public class UserProfilePanel extends JPanel {
             userComboBox.setVisible(true);
             addButton.setVisible(true);
             deleteButton.setVisible(true);
+            resetPasswordButton.setVisible(true);
         } else {
             // 普通用户只能看到自己的档案
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
@@ -1151,13 +1158,25 @@ public class UserProfilePanel extends JPanel {
                 userComboBox.setVisible(false);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
+                resetPasswordButton.setVisible(false);
             } else {
                 userList = new java.util.ArrayList<>();
                 userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
                 userComboBox.setVisible(false);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
+                resetPasswordButton.setVisible(false);
             }
         }
+    }
+    
+    private void onResetPassword() {
+        UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
+        if (selected == null) {
+            JOptionPane.showMessageDialog(this, "请先选择要重置密码的用户！", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        ResetPasswordDialog dialog = new ResetPasswordDialog((Frame) SwingUtilities.getWindowAncestor(this), selected.getName());
+        dialog.setVisible(true);
     }
 } 

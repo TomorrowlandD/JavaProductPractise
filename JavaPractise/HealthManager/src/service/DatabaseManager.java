@@ -1148,4 +1148,50 @@ public class DatabaseManager {
             return false;
         }
     }
+
+    /**
+     * 管理员重置用户密码
+     */
+    public static boolean updateUserPassword(String username, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newPassword);
+            pstmt.setString(2, username);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("重置用户密码失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 根据用户名删除用户（users表）
+     */
+    public static boolean deleteUserByUsername(String username) {
+        String sql = "DELETE FROM users WHERE username = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("删除用户失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 根据用户名删除用户档案（user_profile表）
+     */
+    public static boolean deleteUserProfileByName(String name) {
+        String sql = "DELETE FROM user_profile WHERE name = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("删除用户档案失败: " + e.getMessage());
+            return false;
+        }
+    }
 } 
