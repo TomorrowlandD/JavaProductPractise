@@ -3,12 +3,10 @@ package model;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
-
 /**
  * 饮食统计数据模型类
  * 用于存储和管理用户的饮食统计信息
+ * 简化版本 - 只保留实际使用的功能
  */
 public class DietStats {
     private String userName;
@@ -16,7 +14,6 @@ public class DietStats {
     private int daysWithRecords;
     private double recordFrequency; // 记录频率（百分比）
     private Map<String, Integer> mealCompletion; // 三餐完成情况
-    private List<String> commonFoods; // 常见食物
     private int consecutiveDays; // 连续记录天数
     private double averageMealsPerDay; // 平均每日记录餐数
     private LocalDate startDate;
@@ -27,7 +24,6 @@ public class DietStats {
     // 构造方法
     public DietStats() {
         this.mealCompletion = new HashMap<>();
-        this.commonFoods = new ArrayList<>();
         this.foodPreference = new HashMap<>();
         this.lastUpdated = LocalDate.now();
         
@@ -57,9 +53,6 @@ public class DietStats {
 
     public Map<String, Integer> getMealCompletion() { return mealCompletion; }
     public void setMealCompletion(Map<String, Integer> mealCompletion) { this.mealCompletion = mealCompletion; }
-
-    public List<String> getCommonFoods() { return commonFoods; }
-    public void setCommonFoods(List<String> commonFoods) { this.commonFoods = commonFoods; }
 
     public int getConsecutiveDays() { return consecutiveDays; }
     public void setConsecutiveDays(int consecutiveDays) { this.consecutiveDays = consecutiveDays; }
@@ -113,123 +106,6 @@ public class DietStats {
         } else {
             this.averageMealsPerDay = 0;
         }
-    }
-
-    /**
-     * 获取记录频率描述
-     */
-    public String getRecordFrequencyDescription() {
-        if (recordFrequency >= 90) {
-            return "优秀 - 饮食记录非常规律！";
-        } else if (recordFrequency >= 70) {
-            return "良好 - 饮食记录比较规律";
-        } else if (recordFrequency >= 50) {
-            return "一般 - 饮食记录有待改善";
-        } else {
-            return "较差 - 需要加强饮食记录习惯";
-        }
-    }
-
-    /**
-     * 获取最常记录的餐次
-     */
-    public String getMostRecordedMeal() {
-        String mostRecorded = null;
-        int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : mealCompletion.entrySet()) {
-            if (entry.getValue() > maxCount) {
-                maxCount = entry.getValue();
-                mostRecorded = entry.getKey();
-            }
-        }
-        return mostRecorded != null ? mostRecorded : "暂无记录";
-    }
-
-    /**
-     * 获取最常吃的食物
-     */
-    public String getMostPreferredFood() {
-        if (foodPreference.isEmpty()) {
-            return "暂无食物偏好数据";
-        }
-        
-        String mostPreferred = null;
-        int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : foodPreference.entrySet()) {
-            if (entry.getValue() > maxCount) {
-                maxCount = entry.getValue();
-                mostPreferred = entry.getKey();
-            }
-        }
-        return mostPreferred;
-    }
-
-    /**
-     * 获取三餐完成情况描述
-     */
-    public String getMealCompletionDescription() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("三餐完成情况：");
-        
-        for (Map.Entry<String, Integer> entry : mealCompletion.entrySet()) {
-            sb.append(entry.getKey()).append(" ").append(entry.getValue()).append("次");
-            if (!entry.getKey().equals("晚餐")) {
-                sb.append("，");
-            }
-        }
-        
-        return sb.toString();
-    }
-
-    /**
-     * 获取饮食建议
-     */
-    public List<String> getDietRecommendations() {
-        List<String> recommendations = new ArrayList<>();
-        
-        if (recordFrequency < 70) {
-            recommendations.add("建议提高饮食记录的频率，养成每日记录的习惯");
-        }
-        
-        if (averageMealsPerDay < 2) {
-            recommendations.add("建议记录更多餐次，包括早餐、午餐、晚餐");
-        }
-        
-        if (consecutiveDays < 7) {
-            recommendations.add("建议连续记录一周以上，更好地了解饮食规律");
-        }
-        
-        // 检查食物多样性
-        if (foodPreference.size() < 5) {
-            recommendations.add("建议增加食物种类，保持营养均衡");
-        }
-        
-        if (recommendations.isEmpty()) {
-            recommendations.add("饮食记录习惯良好，请继续保持！");
-        }
-        
-        return recommendations;
-    }
-
-    /**
-     * 获取饮食规律性评分
-     */
-    public String getDietRegularityScore() {
-        double score = 0;
-        
-        // 记录频率权重40%
-        score += recordFrequency * 0.4;
-        
-        // 平均餐数权重30%
-        score += Math.min(averageMealsPerDay / 3.0 * 100, 100) * 0.3;
-        
-        // 连续天数权重30%
-        score += Math.min(consecutiveDays / 30.0 * 100, 100) * 0.3;
-        
-        if (score >= 90) return "A";
-        else if (score >= 80) return "B";
-        else if (score >= 70) return "C";
-        else return "D";
     }
 
     @Override

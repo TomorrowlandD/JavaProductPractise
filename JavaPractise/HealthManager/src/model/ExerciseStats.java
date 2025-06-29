@@ -9,6 +9,7 @@ import java.util.ArrayList;
 /**
  * 运动统计数据模型类
  * 用于存储和管理用户的运动统计信息
+ * 简化版本 - 只保留实际使用的功能
  */
 public class ExerciseStats {
     private String userName;
@@ -23,13 +24,11 @@ public class ExerciseStats {
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDate lastUpdated;
-    private List<String> topExerciseTypes; // 最常做的运动类型
 
     // 构造方法
     public ExerciseStats() {
         this.exerciseTypeDistribution = new HashMap<>();
         this.intensityDistribution = new HashMap<>();
-        this.topExerciseTypes = new ArrayList<>();
         this.lastUpdated = LocalDate.now();
     }
 
@@ -79,9 +78,6 @@ public class ExerciseStats {
     public LocalDate getLastUpdated() { return lastUpdated; }
     public void setLastUpdated(LocalDate lastUpdated) { this.lastUpdated = lastUpdated; }
 
-    public List<String> getTopExerciseTypes() { return topExerciseTypes; }
-    public void setTopExerciseTypes(List<String> topExerciseTypes) { this.topExerciseTypes = topExerciseTypes; }
-
     /**
      * 添加运动类型统计
      */
@@ -118,84 +114,6 @@ public class ExerciseStats {
         } else {
             this.averageDuration = 0;
         }
-    }
-
-    /**
-     * 获取完成率描述
-     */
-    public String getCompletionRateDescription() {
-        if (completionRate >= 90) {
-            return "优秀 - 运动计划执行率很高！";
-        } else if (completionRate >= 70) {
-            return "良好 - 运动计划执行情况不错";
-        } else if (completionRate >= 50) {
-            return "一般 - 运动计划执行率有待提高";
-        } else {
-            return "较差 - 需要加强运动计划的执行";
-        }
-    }
-
-    /**
-     * 获取最常做的运动类型
-     */
-    public String getTopExerciseType() {
-        if (exerciseTypeDistribution.isEmpty()) {
-            return "暂无运动记录";
-        }
-        
-        String topType = null;
-        int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : exerciseTypeDistribution.entrySet()) {
-            if (entry.getValue() > maxCount) {
-                maxCount = entry.getValue();
-                topType = entry.getKey();
-            }
-        }
-        return topType;
-    }
-
-    /**
-     * 获取强度偏好
-     */
-    public String getIntensityPreference() {
-        if (intensityDistribution.isEmpty()) {
-            return "暂无强度记录";
-        }
-        
-        String preference = null;
-        int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : intensityDistribution.entrySet()) {
-            if (entry.getValue() > maxCount) {
-                maxCount = entry.getValue();
-                preference = entry.getKey();
-            }
-        }
-        return preference;
-    }
-
-    /**
-     * 获取运动建议
-     */
-    public List<String> getExerciseRecommendations() {
-        List<String> recommendations = new ArrayList<>();
-        
-        if (completionRate < 70) {
-            recommendations.add("建议提高运动计划的完成率，制定更合理的计划");
-        }
-        
-        if (averageDuration < 0.5) {
-            recommendations.add("建议适当增加单次运动时长，达到更好的锻炼效果");
-        }
-        
-        if (activeDays < 3) {
-            recommendations.add("建议增加运动频率，每周至少运动3天");
-        }
-        
-        if (recommendations.isEmpty()) {
-            recommendations.add("运动习惯良好，请继续保持！");
-        }
-        
-        return recommendations;
     }
 
     @Override
