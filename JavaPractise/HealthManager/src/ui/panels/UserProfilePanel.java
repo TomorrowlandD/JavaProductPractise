@@ -8,6 +8,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import ui.AddUserDialog;
 
 /**
  * 用户档案界面面板
@@ -486,10 +487,7 @@ public class UserProfilePanel extends JPanel {
                 clearAll(false);
             }
         });
-        addButton.addActionListener(e -> {
-            userComboBox.setSelectedItem(null);
-            clearAll(false);
-        });
+        addButton.addActionListener(e -> onAddUser());
         deleteButton.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
             if (selected != null) {
@@ -501,6 +499,15 @@ public class UserProfilePanel extends JPanel {
                 }
             }
         });
+    }
+    
+    private void onAddUser() {
+        AddUserDialog dialog = new AddUserDialog((Frame) SwingUtilities.getWindowAncestor(this));
+        dialog.setVisible(true);
+        if (dialog.isUserCreated()) {
+            refreshUserComboBox();
+            JOptionPane.showMessageDialog(this, "新用户创建成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
     
     /**
@@ -1130,8 +1137,6 @@ public class UserProfilePanel extends JPanel {
             // 管理员可以看到所有用户
             userList = service.DatabaseManager.getAllUserProfiles();
             userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
-            
-            // 管理员界面显示用户选择功能
             userComboBox.setVisible(true);
             addButton.setVisible(true);
             deleteButton.setVisible(true);
@@ -1143,14 +1148,15 @@ public class UserProfilePanel extends JPanel {
                 userList.add(currentUserProfile);
                 userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
                 userComboBox.setSelectedItem(currentUserProfile);
-                
-                // 普通用户界面隐藏用户选择功能
                 userComboBox.setVisible(false);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
             } else {
                 userList = new java.util.ArrayList<>();
                 userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+                userComboBox.setVisible(false);
+                addButton.setVisible(false);
+                deleteButton.setVisible(false);
             }
         }
     }
