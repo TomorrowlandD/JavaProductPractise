@@ -23,7 +23,7 @@ public class ExercisePlan {
     // 预设的运动类型
     public static final String[] EXERCISE_TYPES = {
             "跑步", "游泳", "健身", "瑜伽", "骑行", "步行",
-            "篮球", "足球", "羽毛球", "网球", "跳绳", "其他"
+            "篮球", "足球", "羽毛球", "网球", "跳绳", "其它"
     };
 
     // 预设的运动强度

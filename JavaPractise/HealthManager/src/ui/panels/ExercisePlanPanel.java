@@ -105,10 +105,6 @@ public class ExercisePlanPanel extends JPanel {
             if (!"其它".equals(type)) typeCount++;
         }
         exerciseTypeChecks = new JCheckBox[typeCount];
-        otherTypeField = new JTextField(8);
-        otherTypeField.setPreferredSize(new Dimension(80, 24));
-        otherTypeField.setMinimumSize(new Dimension(60, 24));
-        otherTypeField.setMaximumSize(new Dimension(120, 24));
         // 第一行：所有预设类型（不含"其它"）
         JPanel typeChecksPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         int idx = 0;
@@ -120,9 +116,13 @@ public class ExercisePlanPanel extends JPanel {
             }
         }
         exerciseTypePanel.add(typeChecksPanel);
-        // 第二行：其它输入
+        // 第二行：其它输入（只保留下方的）
         JPanel otherPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         otherPanel.add(new JLabel("其它:"));
+        otherTypeField = new JTextField(8); // 只在这里创建
+        otherTypeField.setPreferredSize(new Dimension(80, 24));
+        otherTypeField.setMinimumSize(new Dimension(60, 24));
+        otherTypeField.setMaximumSize(new Dimension(120, 24));
         otherPanel.add(otherTypeField);
         exerciseTypePanel.add(otherPanel);
         dateField = new JTextField(10);
@@ -424,7 +424,7 @@ public class ExercisePlanPanel extends JPanel {
             cb.setSelected(false);
         }
         otherTypeField.setText("");
-        otherTypeField.setEnabled(false);
+        otherTypeField.setEnabled(true); // 始终可编辑
         
         LocalDate today = LocalDate.now();
         dateField.setText(today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
