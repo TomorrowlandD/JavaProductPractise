@@ -159,11 +159,15 @@ public class DailyRecordPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "该用户该日期已存在每日记录，请勿重复添加", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            // 日期合理性校验
+            // 日期合理性校验 - 每日记录不能记录未来的数据
             LocalDate minDate = LocalDate.of(2020, 1, 1);
-            LocalDate maxDate = LocalDate.now().plusYears(1);
-            if (date.isBefore(minDate) || date.isAfter(maxDate)) {
-                JOptionPane.showMessageDialog(this, "日期不合理，应在2020-01-01和" + maxDate + "之间！", "错误", JOptionPane.ERROR_MESSAGE);
+            LocalDate maxDate = LocalDate.now(); // 修改：只能记录今天或过去的数据
+            if (date.isBefore(minDate)) {
+                JOptionPane.showMessageDialog(this, "日期不能早于2020-01-01！", "日期错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (date.isAfter(maxDate)) {
+                JOptionPane.showMessageDialog(this, "不能记录未来的健康数据！\n体重、睡眠等数据只能记录今天或过去的数据。", "日期错误", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             double weight = Double.parseDouble(weightField.getText().trim());
