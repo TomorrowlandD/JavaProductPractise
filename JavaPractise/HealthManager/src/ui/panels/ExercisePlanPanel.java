@@ -31,6 +31,7 @@ public class ExercisePlanPanel extends JPanel {
     // 计划制定组件
     private JPanel exerciseTypePanel;
     private JCheckBox[] exerciseTypeChecks;
+    private JTextField otherTypeField; // 新增：其它类型输入框
     private JTextField dateField;
     private JTextField durationField;
     private JTextField actualDurationField; // 新增：实际时长输入框
@@ -96,12 +97,34 @@ public class ExercisePlanPanel extends JPanel {
         cancelEditButton = new JButton("取消编辑");
         
         // 计划制定组件
-        exerciseTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        exerciseTypeChecks = new JCheckBox[ExercisePlan.EXERCISE_TYPES.length];
-        for (int i = 0; i < ExercisePlan.EXERCISE_TYPES.length; i++) {
-            exerciseTypeChecks[i] = new JCheckBox(ExercisePlan.EXERCISE_TYPES[i]);
-            exerciseTypePanel.add(exerciseTypeChecks[i]);
+        exerciseTypePanel = new JPanel();
+        exerciseTypePanel.setLayout(new BoxLayout(exerciseTypePanel, BoxLayout.Y_AXIS));
+        // 只保留非"其它"类型的复选框
+        int typeCount = 0;
+        for (String type : ExercisePlan.EXERCISE_TYPES) {
+            if (!"其它".equals(type)) typeCount++;
         }
+        exerciseTypeChecks = new JCheckBox[typeCount];
+        otherTypeField = new JTextField(8);
+        otherTypeField.setPreferredSize(new Dimension(80, 24));
+        otherTypeField.setMinimumSize(new Dimension(60, 24));
+        otherTypeField.setMaximumSize(new Dimension(120, 24));
+        // 第一行：所有预设类型（不含"其它"）
+        JPanel typeChecksPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        int idx = 0;
+        for (String type : ExercisePlan.EXERCISE_TYPES) {
+            if (!"其它".equals(type)) {
+                exerciseTypeChecks[idx] = new JCheckBox(type);
+                typeChecksPanel.add(exerciseTypeChecks[idx]);
+                idx++;
+            }
+        }
+        exerciseTypePanel.add(typeChecksPanel);
+        // 第二行：其它输入
+        JPanel otherPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        otherPanel.add(new JLabel("其它:"));
+        otherPanel.add(otherTypeField);
+        exerciseTypePanel.add(otherPanel);
         dateField = new JTextField(10);
         durationField = new JTextField(5);
         actualDurationField = new JTextField(5); // 新增：实际时长输入框
@@ -400,6 +423,8 @@ public class ExercisePlanPanel extends JPanel {
         for (JCheckBox cb : exerciseTypeChecks) {
             cb.setSelected(false);
         }
+        otherTypeField.setText("");
+        otherTypeField.setEnabled(false);
         
         LocalDate today = LocalDate.now();
         dateField.setText(today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
@@ -427,20 +452,18 @@ public class ExercisePlanPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "请先选择用户", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        // 验证运动类型
-        StringBuilder exerciseTypes = new StringBuilder();
-        for (JCheckBox cb : exerciseTypeChecks) {
-            if (cb.isSelected()) {
-                if (exerciseTypes.length() > 0) {
-                    exerciseTypes.append(", ");
+        // 优先使用下方"其它"输入框
+        String exerciseType = otherTypeField.getText().trim();
+        if (exerciseType.isEmpty()) {
+            for (JCheckBox cb : exerciseTypeChecks) {
+                if (cb.isSelected()) {
+                    exerciseType = cb.getText();
+                    break;
                 }
-                exerciseTypes.append(cb.getText());
             }
         }
-        
-        if (exerciseTypes.length() == 0) {
-            JOptionPane.showMessageDialog(this, "请选择至少一种运动类型", "提示", JOptionPane.WARNING_MESSAGE);
+        if (exerciseType.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请选择运动类型或填写其它类型", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         
@@ -515,7 +538,7 @@ public class ExercisePlanPanel extends JPanel {
             plan.setId(editingPlanId);
         }
         plan.setUserName(selectedUser.getName());
-        plan.setExerciseType(exerciseTypes.toString());
+        plan.setExerciseType(exerciseType);
         plan.setPlanDate(planDate);
         plan.setDuration(duration);
         plan.setActualDuration(actualDuration); // 新增：设置实际时长
@@ -549,19 +572,21 @@ public class ExercisePlanPanel extends JPanel {
      * 用计划数据填充表单
      */
     private void fillFormWithPlan(ExercisePlan plan) {
-        // 清空并设置运动类型
         for (JCheckBox cb : exerciseTypeChecks) {
             cb.setSelected(false);
         }
-        
-        String[] types = plan.getExerciseType().split(", ");
-        for (String type : types) {
-            for (JCheckBox cb : exerciseTypeChecks) {
-                if (cb.getText().equals(type.trim())) {
-                    cb.setSelected(true);
-                    break;
-                }
+        otherTypeField.setText("");
+        String type = plan.getExerciseType();
+        boolean matched = false;
+        for (JCheckBox cb : exerciseTypeChecks) {
+            if (cb.getText().equals(type)) {
+                cb.setSelected(true);
+                matched = true;
+                break;
             }
+        }
+        if (!matched && type != null && !type.isEmpty()) {
+            otherTypeField.setText(type);
         }
         
         // 设置其他字段

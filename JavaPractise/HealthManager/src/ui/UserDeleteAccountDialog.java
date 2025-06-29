@@ -71,6 +71,17 @@ public class UserDeleteAccountDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "用户名或密码错误！", "输入错误", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        // 二次确认
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "你确定要注销账户吗？此操作不可恢复！",
+            "确认注销",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
         // 删除users表和user_profile档案
         boolean userDeleted = DatabaseManager.deleteUserByUsername(username);
         boolean profileDeleted = DatabaseManager.deleteUserProfileByName(username);
