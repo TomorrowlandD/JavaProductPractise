@@ -368,19 +368,35 @@ public class ExercisePlanPanel extends JPanel {
         UserProfile currentSelected = (UserProfile) userComboBox.getSelectedItem();
         userComboBox.removeAllItems();
         
-        List<UserProfile> profiles = DatabaseManager.getAllUserProfiles();
-        for (UserProfile profile : profiles) {
-            userComboBox.addItem(profile);
-        }
-        
-        // 如果之前有选中的用户，尝试重新选中
-        if (currentSelected != null) {
-            for (int i = 0; i < userComboBox.getItemCount(); i++) {
-                UserProfile profile = userComboBox.getItemAt(i);
-                if (profile.getName().equals(currentSelected.getName())) {
-                    userComboBox.setSelectedIndex(i);
-                    break;
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            List<UserProfile> profiles = DatabaseManager.getAllUserProfiles();
+            for (UserProfile profile : profiles) {
+                userComboBox.addItem(profile);
+            }
+            
+            // 管理员界面显示用户选择功能
+            userComboBox.setVisible(true);
+            
+            // 如果之前有选中的用户，尝试重新选中
+            if (currentSelected != null) {
+                for (int i = 0; i < userComboBox.getItemCount(); i++) {
+                    UserProfile profile = userComboBox.getItemAt(i);
+                    if (profile.getName().equals(currentSelected.getName())) {
+                        userComboBox.setSelectedIndex(i);
+                        break;
+                    }
                 }
+            }
+        } else {
+            // 普通用户只能看到自己的数据
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userComboBox.addItem(currentUserProfile);
+                userComboBox.setSelectedItem(currentUserProfile);
+                
+                // 普通用户界面隐藏用户选择功能
+                userComboBox.setVisible(false);
             }
         }
         

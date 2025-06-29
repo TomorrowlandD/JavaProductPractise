@@ -40,18 +40,39 @@ public class DataAnalysisPanel extends JPanel {
         });
     }
 
-    // 健康统计面板（带用户选择框和统计展示）
+    // 健康统计面板（带用户选择框、刷新按钮、统计展示和历史表格）
     private JPanel createHealthStatsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout(10, 10));
 
-        // 用户选择下拉框
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        // 用户选择下拉框和刷新按钮
+        JComboBox<UserProfile> userComboBox;
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        } else {
+            // 普通用户只能看到自己的数据
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
+                userComboBox.setSelectedItem(currentUserProfile);
+            } else {
+                userComboBox = new JComboBox<>(new UserProfile[0]);
+            }
+        }
+        
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
+        
+        // 根据用户角色控制界面显示
+        if (!service.SessionManager.isAdmin()) {
+            userComboBox.setVisible(false);
+            topPanel.remove(userComboBox);
+        }
+        
         panel.add(topPanel, BorderLayout.NORTH);
 
         // 统计区（上方）
@@ -192,12 +213,33 @@ public class DataAnalysisPanel extends JPanel {
         panel.setLayout(new BorderLayout(10, 10));
 
         // 用户选择下拉框和刷新按钮
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        JComboBox<UserProfile> userComboBox;
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        } else {
+            // 普通用户只能看到自己的数据
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
+                userComboBox.setSelectedItem(currentUserProfile);
+            } else {
+                userComboBox = new JComboBox<>(new UserProfile[0]);
+            }
+        }
+        
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
+        
+        // 根据用户角色控制界面显示
+        if (!service.SessionManager.isAdmin()) {
+            userComboBox.setVisible(false);
+            topPanel.remove(userComboBox);
+        }
+        
         panel.add(topPanel, BorderLayout.NORTH);
 
         // 统计区
@@ -297,12 +339,33 @@ public class DataAnalysisPanel extends JPanel {
         panel.setLayout(new BorderLayout(10, 10));
 
         // 用户选择下拉框和刷新按钮
-        JComboBox<UserProfile> userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        JComboBox<UserProfile> userComboBox;
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            userComboBox = new JComboBox<>(DatabaseManager.getAllUserProfiles().toArray(new UserProfile[0]));
+        } else {
+            // 普通用户只能看到自己的数据
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userComboBox = new JComboBox<>(new UserProfile[]{currentUserProfile});
+                userComboBox.setSelectedItem(currentUserProfile);
+            } else {
+                userComboBox = new JComboBox<>(new UserProfile[0]);
+            }
+        }
+        
         JButton refreshBtn = new JButton("刷新");
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("选择用户："));
         topPanel.add(userComboBox);
         topPanel.add(refreshBtn);
+        
+        // 根据用户角色控制界面显示
+        if (!service.SessionManager.isAdmin()) {
+            userComboBox.setVisible(false);
+            topPanel.remove(userComboBox);
+        }
+        
         panel.add(topPanel, BorderLayout.NORTH);
 
         // 统计区

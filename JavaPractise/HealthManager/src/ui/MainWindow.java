@@ -31,6 +31,19 @@ public class MainWindow extends JFrame {
     @SuppressWarnings("this-escape")
     public MainWindow() {
         initComponents();
+        updateWindowTitle();
+    }
+    
+    /**
+     * 更新窗口标题，显示当前用户信息
+     */
+    private void updateWindowTitle() {
+        String title = "健康管理系统";
+        if (service.SessionManager.isLoggedIn()) {
+            String userInfo = service.SessionManager.getCurrentUserDisplayName();
+            title += " - " + userInfo;
+        }
+        setTitle(title);
     }
     
     /**
@@ -180,28 +193,5 @@ public class MainWindow extends JFrame {
         panel.add(messageLabel, BorderLayout.NORTH);
         
         return panel;
-    }
-    
-    /**
-     * 程序入口方法
-     * 
-     * @param args 命令行参数（当前未使用）
-     */
-    public static void main(String[] args) {
-        // 设置界面外观为系统默认外观
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        // 在事件调度线程中启动程序
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                MainWindow window = new MainWindow();
-                window.setVisible(true);
-            }
-        });
     }
 } 

@@ -300,13 +300,30 @@ public class DailyRecordPanel extends JPanel {
         
         // 刷新用户列表
         userComboBox.removeAllItems();
-        List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
-        for (UserProfile user : userList) {
-            userComboBox.addItem(user);
+        
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            for (UserProfile user : userList) {
+                userComboBox.addItem(user);
+            }
+            
+            // 管理员界面显示用户选择功能
+            userComboBox.setVisible(true);
+        } else {
+            // 普通用户只能看到自己的数据
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userComboBox.addItem(currentUserProfile);
+                userComboBox.setSelectedItem(currentUserProfile);
+                
+                // 普通用户界面隐藏用户选择功能
+                userComboBox.setVisible(false);
+            }
         }
         
-        // 恢复选中状态
-        if (selectedUserName != null) {
+        // 恢复选中状态（仅管理员需要）
+        if (service.SessionManager.isAdmin() && selectedUserName != null) {
             for (int i = 0; i < userComboBox.getItemCount(); i++) {
                 UserProfile user = userComboBox.getItemAt(i);
                 if (user.getName().equals(selectedUserName)) {
@@ -314,7 +331,7 @@ public class DailyRecordPanel extends JPanel {
                     break;
                 }
             }
-        } else if (userComboBox.getItemCount() > 0) {
+        } else if (service.SessionManager.isAdmin() && userComboBox.getItemCount() > 0) {
             // 如果没有之前选中的用户，选择第一个
             userComboBox.setSelectedIndex(0);
         }

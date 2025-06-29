@@ -1,6 +1,9 @@
 package service;
 
 import model.UserProfile;
+import model.User;
+import model.ExercisePlan;
+import model.DietRecord;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,6 +61,18 @@ public class DatabaseManager {
      * 创建各种表(这样在别的电脑上也能运行)
      */
     public static void initializeDatabase() {
+        // 创建用户认证表
+        String createUsersTableSQL = "CREATE TABLE IF NOT EXISTS users (" +
+            "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID'," +
+            "username VARCHAR(50) NOT NULL UNIQUE COMMENT '登录用户名'," +
+            "password VARCHAR(255) NOT NULL COMMENT '密码'," +
+            "role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER' COMMENT '用户角色'," +
+            "profile_name VARCHAR(50) COMMENT '关联的档案名称'," +
+            "is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活'," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户认证表'";
+            
         String createTableSQL = "CREATE TABLE IF NOT EXISTS user_profile (" +
             "id INT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID'," +
             "name VARCHAR(50) NOT NULL UNIQUE COMMENT '姓名-唯一'," +
@@ -123,6 +138,21 @@ public class DatabaseManager {
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            
+            // 创建用户认证表
+            stmt.executeUpdate(createUsersTableSQL);
+            System.out.println("用户认证表检查完成");
+            
+            // 检查是否需要插入默认超级管理员账户
+            String checkAdminSQL = "SELECT COUNT(*) FROM users WHERE role = 'ADMIN'";
+            try (ResultSet rs = stmt.executeQuery(checkAdminSQL)) {
+                if (rs.next() && rs.getInt(1) == 0) {
+                    // 插入默认超级管理员账户（root/123456）
+                    String insertAdminSQL = "INSERT INTO users (username, password, role) VALUES ('root', '123456', 'ADMIN')";
+                    stmt.executeUpdate(insertAdminSQL);
+                    System.out.println("默认超级管理员账户创建完成: root/123456");
+                }
+            }
             
             stmt.executeUpdate(createTableSQL);
             System.out.println("用户档案表检查完成");
@@ -476,7 +506,7 @@ public class DatabaseManager {
      * @param record DailyRecord对象
      * @return 保存是否成功
      */
-    public static boolean saveDailyRecord(model.DailyRecord record) {
+    public static boolean saveDailyRecord(DailyRecord record) {
         if (record == null) return false;
         String insertSQL = "INSERT INTO daily_record (user_name, date, weight, exercise, exercise_duration, sleep_duration, mood, note) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -530,7 +560,7 @@ public class DatabaseManager {
     /**
      * 更新每日记录
      */
-    public static boolean updateDailyRecord(model.DailyRecord record) {
+    public static boolean updateDailyRecord(DailyRecord record) {
         if (record == null || record.getId() == 0) return false;
         String sql = "UPDATE daily_record SET user_name=?, date=?, weight=?, exercise=?, exercise_duration=?, sleep_duration=?, mood=?, note=? WHERE id=?";
         try (Connection conn = getConnection();
@@ -571,7 +601,7 @@ public class DatabaseManager {
     /**
      * 插入新的运动计划
      */
-    public static boolean insertExercisePlan(model.ExercisePlan plan) {
+    public static boolean insertExercisePlan(ExercisePlan plan) {
         String insertSQL = "INSERT INTO exercise_plan (user_name, exercise_type, plan_date, duration, intensity, is_completed, actual_duration, notes) " +
                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
@@ -605,7 +635,7 @@ public class DatabaseManager {
     /**
      * 更新运动计划
      */
-    public static boolean updateExercisePlan(model.ExercisePlan plan) {
+    public static boolean updateExercisePlan(ExercisePlan plan) {
         String updateSQL = "UPDATE exercise_plan " +
                           "SET user_name=?, exercise_type=?, plan_date=?, duration=?, intensity=?, " +
                           "is_completed=?, actual_duration=?, notes=? " +
@@ -631,7 +661,7 @@ public class DatabaseManager {
     /**
      * 设置运动计划PreparedStatement的参数
      */
-    private static void setExercisePlanParameters(PreparedStatement pstmt, model.ExercisePlan plan) throws SQLException {
+    private static void setExercisePlanParameters(PreparedStatement pstmt, ExercisePlan plan) throws SQLException {
         pstmt.setString(1, plan.getUserName());
         pstmt.setString(2, plan.getExerciseType());
         pstmt.setDate(3, java.sql.Date.valueOf(plan.getPlanDate()));
@@ -657,14 +687,14 @@ public class DatabaseManager {
     /**
      * 获取所有运动计划
      */
-    public static List<model.ExercisePlan> getAllExercisePlans() {
-        List<model.ExercisePlan> plans = new ArrayList<>();
+    public static List<ExercisePlan> getAllExercisePlans() {
+        List<ExercisePlan> plans = new ArrayList<>();
         String sql = "SELECT * FROM exercise_plan ORDER BY plan_date DESC, id DESC";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
-                model.ExercisePlan plan = new model.ExercisePlan();
+                ExercisePlan plan = new ExercisePlan();
                 plan.setId(rs.getInt("id"));
                 plan.setUserName(rs.getString("user_name"));
                 plan.setExerciseType(rs.getString("exercise_type"));
@@ -698,15 +728,15 @@ public class DatabaseManager {
     /**
      * 根据用户名获取运动计划
      */
-    public static List<model.ExercisePlan> getExercisePlansByUser(String userName) {
-        List<model.ExercisePlan> plans = new ArrayList<>();
+    public static List<ExercisePlan> getExercisePlansByUser(String userName) {
+        List<ExercisePlan> plans = new ArrayList<>();
         String sql = "SELECT * FROM exercise_plan WHERE user_name = ? ORDER BY plan_date DESC, id DESC";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, userName);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    model.ExercisePlan plan = new model.ExercisePlan();
+                    ExercisePlan plan = new ExercisePlan();
                     plan.setId(rs.getInt("id"));
                     plan.setUserName(rs.getString("user_name"));
                     plan.setExerciseType(rs.getString("exercise_type"));
@@ -794,12 +824,12 @@ public class DatabaseManager {
     /**
      * 插入新的饮食记录
      */
-    public static boolean insertDietRecord(model.DietRecord record) {
+    public static boolean insertDietRecord(DietRecord record) {
         if (record == null) return false;
-        model.DietRecord.ValidationResult result = record.validateRecord();
+        DietRecord.ValidationResult result = record.validateRecord();
         if (!result.isValid()) {
             System.err.println("数据验证失败: " + result.getMessage());
-            javax.swing.JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", javax.swing.JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", JOptionPane.WARNING_MESSAGE);
             return false;
         }
         String insertSQL = "INSERT INTO diet_record (user_name, record_date, breakfast, lunch, dinner, notes) " +
@@ -819,7 +849,7 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             System.err.println("饮食记录插入失败: " + e.getMessage());
-            javax.swing.JOptionPane.showMessageDialog(null, "饮食记录插入失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "饮食记录插入失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
         return false;
     }
@@ -827,12 +857,12 @@ public class DatabaseManager {
     /**
      * 更新饮食记录
      */
-    public static boolean updateDietRecord(model.DietRecord record) {
+    public static boolean updateDietRecord(DietRecord record) {
         if (record == null || record.getId() == 0) return false;
-        model.DietRecord.ValidationResult result = record.validateRecord();
+        DietRecord.ValidationResult result = record.validateRecord();
         if (!result.isValid()) {
             System.err.println("数据验证失败: " + result.getMessage());
-            javax.swing.JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", javax.swing.JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(null, "数据验证失败: " + result.getMessage(), "数据错误", JOptionPane.WARNING_MESSAGE);
             return false;
         }
         String updateSQL = "UPDATE diet_record SET user_name=?, record_date=?, breakfast=?, lunch=?, dinner=?, notes=? WHERE id=?";
@@ -847,7 +877,7 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             System.err.println("饮食记录更新失败: " + e.getMessage());
-            javax.swing.JOptionPane.showMessageDialog(null, "饮食记录更新失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "饮食记录更新失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
         return false;
     }
@@ -864,7 +894,7 @@ public class DatabaseManager {
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "删除饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "删除饮食记录失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
@@ -872,9 +902,9 @@ public class DatabaseManager {
     /**
      * 查询某用户所有饮食记录
      */
-    public static java.util.List<model.DietRecord> getDietRecordsByUser(String userName) {
-        if (userName == null || userName.trim().isEmpty()) return new java.util.ArrayList<>();
-        java.util.List<model.DietRecord> records = new java.util.ArrayList<>();
+    public static List<DietRecord> getDietRecordsByUser(String userName) {
+        if (userName == null || userName.trim().isEmpty()) return new ArrayList<>();
+        List<DietRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM diet_record WHERE user_name = ? ORDER BY record_date DESC, id DESC";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -886,7 +916,7 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
         return records;
     }
@@ -894,7 +924,7 @@ public class DatabaseManager {
     /**
      * 查询单条饮食记录
      */
-    public static model.DietRecord getDietRecordById(int id) {
+    public static DietRecord getDietRecordById(int id) {
         if (id <= 0) return null;
         String sql = "SELECT * FROM diet_record WHERE id = ?";
         try (Connection conn = getConnection();
@@ -907,7 +937,7 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "查询饮食记录失败:\n" + e.getMessage(), "数据库错误", JOptionPane.ERROR_MESSAGE);
         }
         return null;
     }
@@ -915,7 +945,7 @@ public class DatabaseManager {
     /**
      * 设置饮食记录PreparedStatement参数
      */
-    private static void setDietRecordParameters(PreparedStatement pstmt, model.DietRecord record) throws SQLException {
+    private static void setDietRecordParameters(PreparedStatement pstmt, DietRecord record) throws SQLException {
         pstmt.setString(1, record.getUserName());
         pstmt.setDate(2, java.sql.Date.valueOf(record.getRecordDate()));
         pstmt.setString(3, record.getBreakfast());
@@ -927,8 +957,8 @@ public class DatabaseManager {
     /**
      * 从ResultSet解析DietRecord对象
      */
-    private static model.DietRecord parseDietRecordFromResultSet(ResultSet rs) throws SQLException {
-        model.DietRecord record = new model.DietRecord();
+    private static DietRecord parseDietRecordFromResultSet(ResultSet rs) throws SQLException {
+        DietRecord record = new DietRecord();
         record.setId(rs.getInt("id"));
         record.setUserName(rs.getString("user_name"));
         record.setRecordDate(rs.getDate("record_date").toLocalDate());
@@ -981,5 +1011,120 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return records;
+    }
+    
+    // ==================== 用户认证相关操作 ====================
+    
+    /**
+     * 用户身份验证
+     * @param username 用户名
+     * @param password 密码
+     * @return 验证成功返回用户对象，否则返回null
+     */
+    public static User authenticateUser(String username, String password) {
+        String sql = "SELECT * FROM users WHERE username = ? AND password = ? AND is_active = TRUE";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPassword(rs.getString("password"));
+                    user.setRole(rs.getString("role"));
+                    user.setProfileName(rs.getString("profile_name"));
+                    user.setActive(rs.getBoolean("is_active"));
+                    return user;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("用户认证失败: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * 创建新用户
+     * @param username 用户名
+     * @param password 密码
+     * @param role 角色
+     * @return 创建是否成功
+     */
+    public static boolean createUser(String username, String password, String role) {
+        String sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.setString(3, role);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("创建用户失败: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取所有用户（仅管理员可用）
+     * @return 用户列表
+     */
+    public static List<User> getAllUsers() {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM users ORDER BY id ASC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                User user = new User();
+                user.setId(rs.getInt("id"));
+                user.setUsername(rs.getString("username"));
+                user.setPassword(rs.getString("password"));
+                user.setRole(rs.getString("role"));
+                user.setProfileName(rs.getString("profile_name"));
+                user.setActive(rs.getBoolean("is_active"));
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            System.err.println("获取用户列表失败: " + e.getMessage());
+        }
+        return users;
+    }
+    
+    /**
+     * 删除用户
+     * @param userId 用户ID
+     * @return 删除是否成功
+     */
+    public static boolean deleteUser(int userId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("删除用户失败: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 更新用户档案关联
+     * @param username 用户名
+     * @param profileName 档案名称
+     * @return 更新是否成功
+     */
+    public static boolean updateUserProfileLink(String username, String profileName) {
+        String sql = "UPDATE users SET profile_name = ? WHERE username = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, profileName);
+            pstmt.setString(2, username);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("更新用户档案关联失败: " + e.getMessage());
+            return false;
+        }
     }
 } 

@@ -124,9 +124,9 @@ private static final String PASSWORD = "your_password";
 cd HealthManager
 
 # 编译Java文件
-javac -cp "lib/*" -d classes src/**/*.java
+javac -cp "lib/mysql-connector-j-9.3.0.jar" -d classes src/*.java src/model/*.java src/service/*.java src/ui/*.java src/ui/panels/*.java
 
 # 运行程序
-java -cp "classes;lib/*" Main
+java -cp "classes;lib/mysql-connector-j-9.3.0.jar" Main
 ```
 

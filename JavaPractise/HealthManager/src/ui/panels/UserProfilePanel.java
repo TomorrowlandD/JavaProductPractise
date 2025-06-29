@@ -1126,7 +1126,32 @@ public class UserProfilePanel extends JPanel {
      * 初始化用户下拉框
      */
     private void refreshUserComboBox() {
-        userList = service.DatabaseManager.getAllUserProfiles();
-        userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+        if (service.SessionManager.isAdmin()) {
+            // 管理员可以看到所有用户
+            userList = service.DatabaseManager.getAllUserProfiles();
+            userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            
+            // 管理员界面显示用户选择功能
+            userComboBox.setVisible(true);
+            addButton.setVisible(true);
+            deleteButton.setVisible(true);
+        } else {
+            // 普通用户只能看到自己的档案
+            UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
+            if (currentUserProfile != null) {
+                userList = new java.util.ArrayList<>();
+                userList.add(currentUserProfile);
+                userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+                userComboBox.setSelectedItem(currentUserProfile);
+                
+                // 普通用户界面隐藏用户选择功能
+                userComboBox.setVisible(false);
+                addButton.setVisible(false);
+                deleteButton.setVisible(false);
+            } else {
+                userList = new java.util.ArrayList<>();
+                userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
+            }
+        }
     }
 } 
