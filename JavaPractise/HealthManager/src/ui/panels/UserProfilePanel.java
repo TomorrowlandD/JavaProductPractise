@@ -497,11 +497,29 @@ public class UserProfilePanel extends JPanel {
         deleteButton.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
             if (selected != null) {
-                int result = JOptionPane.showConfirmDialog(this, "确定要删除该用户吗？", "确认删除", JOptionPane.YES_NO_OPTION);
+                // 检查是否删除当前登录用户
+                String currentUsername = service.SessionManager.getCurrentUser() != null ? 
+                    service.SessionManager.getCurrentUser().getUsername() : null;
+                if (selected.getName().equals(currentUsername)) {
+                    JOptionPane.showMessageDialog(this, 
+                        "不能删除当前登录的用户！请先切换到其他用户或退出登录。", 
+                        "删除失败", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                int result = JOptionPane.showConfirmDialog(this, 
+                    "确定要删除该用户吗？\n注意：删除用户将同时删除该用户的所有数据（档案、记录、计划等）", 
+                    "确认删除", JOptionPane.YES_NO_OPTION);
                 if (result == JOptionPane.YES_OPTION) {
-                    service.DatabaseManager.deleteUserProfileById(selected.getId());
-                    refreshUserComboBox();
-                    clearAll(false);
+                    // 使用新的完全删除方法，确保同时删除users表和user_profile表中的数据
+                    boolean success = service.DatabaseManager.deleteUserCompletelyById(selected.getId());
+                    if (success) {
+                        JOptionPane.showMessageDialog(this, "用户删除成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                        refreshUserComboBox();
+                        clearAll(false);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "用户删除失败！", "错误", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             }
         });

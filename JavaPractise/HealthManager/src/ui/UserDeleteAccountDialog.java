@@ -2,6 +2,7 @@ package ui;
 
 import service.DatabaseManager;
 import model.User;
+import service.SessionManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -83,9 +84,18 @@ public class UserDeleteAccountDialog extends JDialog {
             return;
         }
         // 删除users表和user_profile档案
-        boolean userDeleted = DatabaseManager.deleteUserByUsername(username);
-        boolean profileDeleted = DatabaseManager.deleteUserProfileByName(username);
-        if (userDeleted && profileDeleted) {
+        boolean success = DatabaseManager.deleteUserCompletely(username);
+        if (success) {
+            // 如果删除的是当前登录用户，强制登出
+            if (SessionManager.getCurrentUser() != null && 
+                SessionManager.getCurrentUser().getUsername().equals(username)) {
+                SessionManager.logout();
+                // 关闭主窗口
+                Window mainWindow = SwingUtilities.getWindowAncestor(this);
+                if (mainWindow != null) {
+                    mainWindow.dispose();
+                }
+            }
             JOptionPane.showMessageDialog(this, "账号已注销，感谢您的使用！", "注销成功", JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } else {

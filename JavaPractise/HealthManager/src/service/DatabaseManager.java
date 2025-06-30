@@ -5,8 +5,8 @@ import model.User;
 import model.ExercisePlan;
 import model.DietRecord;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+// import java.time.LocalDateTime;
+// import java.time.format.DateTimeFormatter;
 import javax.swing.JOptionPane;
 import java.util.ArrayList;
 import java.util.List;
@@ -835,7 +835,7 @@ public class DatabaseManager {
         String insertSQL = "INSERT INTO diet_record (user_name, record_date, breakfast, lunch, dinner, notes) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS)) {
+                 PreparedStatement pstmt = conn.prepareStatement(insertSQL, Statement.RETURN_GENERATED_KEYS)) {
             setDietRecordParameters(pstmt, record);
             int resultNum = pstmt.executeUpdate();
             if (resultNum > 0) {
@@ -1191,6 +1191,123 @@ public class DatabaseManager {
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("删除用户档案失败: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 完全删除用户（同时删除users表和user_profile表中的数据）
+     * 
+     * 注意：由于外键约束的存在，删除user_profile表中的数据会自动级联删除
+     * 相关的daily_record、exercise_plan、diet_record表中的数据
+     * 
+     * @param username 用户名
+     * @return 删除是否成功
+     */
+    public static synchronized boolean deleteUserCompletely(String username) {
+        try (Connection conn = getConnection()) {
+            // 开启事务
+            conn.setAutoCommit(false);
+            
+            try {
+                // 第一步：删除user_profile表中的数据（会级联删除相关记录）
+                String deleteProfileSQL = "DELETE FROM user_profile WHERE name = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteProfileSQL)) {
+                    pstmt.setString(1, username);
+                    int profileResult = pstmt.executeUpdate();
+                    System.out.println("删除用户档案结果: " + profileResult);
+                }
+                
+                // 第二步：删除users表中的数据
+                String deleteUserSQL = "DELETE FROM users WHERE username = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteUserSQL)) {
+                    pstmt.setString(1, username);
+                    int userResult = pstmt.executeUpdate();
+                    System.out.println("删除用户认证结果: " + userResult);
+                }
+                
+                // 提交事务
+                conn.commit();
+                System.out.println("用户完全删除成功: " + username);
+                return true;
+                
+            } catch (SQLException e) {
+                // 回滚事务
+                conn.rollback();
+                System.err.println("删除用户失败，已回滚: " + e.getMessage());
+                return false;
+            } finally {
+                // 恢复自动提交
+                conn.setAutoCommit(true);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("删除用户失败: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 根据用户档案ID完全删除用户
+     * 
+     * @param profileId 用户档案ID
+     * @return 删除是否成功
+     */
+    public static synchronized boolean deleteUserCompletelyById(int profileId) {
+        try (Connection conn = getConnection()) {
+            // 开启事务
+            conn.setAutoCommit(false);
+            
+            try {
+                // 第一步：根据档案ID获取用户名
+                String getUserSQL = "SELECT name FROM user_profile WHERE id = ?";
+                String username = null;
+                try (PreparedStatement pstmt = conn.prepareStatement(getUserSQL)) {
+                    pstmt.setInt(1, profileId);
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            username = rs.getString("name");
+                        }
+                    }
+                }
+                
+                // 第二步：删除user_profile表中的数据（会级联删除相关记录）
+                String deleteProfileSQL = "DELETE FROM user_profile WHERE id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteProfileSQL)) {
+                    pstmt.setInt(1, profileId);
+                    int profileResult = pstmt.executeUpdate();
+                    System.out.println("删除用户档案结果: " + profileResult);
+                }
+                
+                // 第三步：如果找到了用户名，删除users表中的数据
+                if (username != null) {
+                    String deleteUserSQL = "DELETE FROM users WHERE username = ?";
+                    try (PreparedStatement pstmt = conn.prepareStatement(deleteUserSQL)) {
+                        pstmt.setString(1, username);
+                        int userResult = pstmt.executeUpdate();
+                        System.out.println("删除用户认证结果: " + userResult);
+                    }
+                } else {
+                    System.out.println("未找到ID为 " + profileId + " 的用户档案，仅删除档案记录");
+                }
+                
+                // 提交事务
+                conn.commit();
+                System.out.println("用户完全删除成功，档案ID: " + profileId + ", 用户名: " + username);
+                return true;
+                
+            } catch (SQLException e) {
+                // 回滚事务
+                conn.rollback();
+                System.err.println("删除用户失败，已回滚: " + e.getMessage());
+                return false;
+            } finally {
+                // 恢复自动提交
+                conn.setAutoCommit(true);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("删除用户失败: " + e.getMessage());
             return false;
         }
     }
