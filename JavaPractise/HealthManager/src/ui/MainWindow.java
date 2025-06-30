@@ -123,18 +123,33 @@ public class MainWindow extends JFrame {
         fileMenu.setFont(getChineseFont(Font.PLAIN, 14));
         fileMenu.setMnemonic(KeyEvent.VK_F);
         
-        JMenuItem exitItem = new JMenuItem("退出", KeyEvent.VK_X);
-        exitItem.setFont(getChineseFont(Font.PLAIN, 14));
-        exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
-        exitItem.addActionListener(new java.awt.event.ActionListener() {
+        JMenuItem logoutItem = new JMenuItem("退出登录", KeyEvent.VK_X);
+        logoutItem.setFont(getChineseFont(Font.PLAIN, 14));
+        logoutItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
+        logoutItem.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.exit(0);
+                // 注销当前会话
+                service.SessionManager.logout();
+                // 关闭当前主窗口
+                MainWindow.this.dispose();
+                // 弹出登录对话框
+                boolean loginSuccess = ui.LoginDialog.showLoginDialog();
+                if (loginSuccess && service.SessionManager.isLoggedIn()) {
+                    // 重新打开主窗口
+                    SwingUtilities.invokeLater(() -> {
+                        MainWindow mainWindow = new MainWindow();
+                        mainWindow.setVisible(true);
+                    });
+                } else {
+                    // 用户未登录，退出程序
+                    System.exit(0);
+                }
             }
         });
         
         fileMenu.addSeparator();
-        fileMenu.add(exitItem);
+        fileMenu.add(logoutItem);
         
         // 创建帮助菜单
         JMenu helpMenu = new JMenu("帮助");
