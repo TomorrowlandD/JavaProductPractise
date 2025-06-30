@@ -1,6 +1,9 @@
 package ui.panels;
 
 import model.UserProfile;
+import ui.AddUserDialog;
+import ui.ResetPasswordDialog;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
@@ -8,8 +11,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import ui.AddUserDialog;
-import ui.ResetPasswordDialog;
 
 /**
  * 用户档案界面面板
@@ -110,6 +111,7 @@ public class UserProfilePanel extends JPanel {
         healthNotesArea = new JTextArea(2, 20);
         healthNotesArea.setLineWrap(true);
         healthNotesArea.setWrapStyleWord(true);
+        healthNotesArea.setToolTipText("可填写健康状况备注，如疾病史、运动限制等");
         
         // 健康状况复选框组件
         noHealthIssuesBox = new JCheckBox("无特殊疾病史");
@@ -243,6 +245,10 @@ public class UserProfilePanel extends JPanel {
         // 健康状况复选框面板
         gbc.gridy++; gbc.gridwidth = 2;
         mainPanel.add(createHealthStatusPanel(), gbc);
+        
+        // 健康备注面板
+        gbc.gridy++; gbc.gridwidth = 2;
+        mainPanel.add(createHealthNotesPanel(), gbc);
         
         // 操作按钮面板
         gbc.gridy++; gbc.gridwidth = 2;
@@ -412,6 +418,19 @@ public class UserProfilePanel extends JPanel {
         statusPanel.add(otherHealthField);
         panel.add(statusPanel, gbc);
         
+        return panel;
+    }
+    
+    /**
+     * 创建健康备注面板
+     */
+    private JPanel createHealthNotesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(new TitledBorder("健康备注"));
+        panel.add(new JLabel("备注:"), BorderLayout.WEST);
+        JScrollPane scrollPane = new JScrollPane(healthNotesArea);
+        scrollPane.setPreferredSize(new Dimension(0, 50));
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
     
@@ -621,7 +640,7 @@ public class UserProfilePanel extends JPanel {
         targetDateField.setText(defaultTarget.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         
         // 设置默认健康备注
-        healthNotesArea.setText("无特殊疾病史");
+        healthNotesArea.setText("无特殊备注");
         
         // 设置默认健康状况为"无特殊疾病史"
         noHealthIssuesBox.setSelected(true);
@@ -1054,6 +1073,8 @@ public class UserProfilePanel extends JPanel {
             }
             if (profile.getHealthNotes() != null) {
                 healthNotesArea.setText(profile.getHealthNotes());
+            } else {
+                healthNotesArea.setText("无特殊备注");
             }
             
             // 恢复健康状况复选框
@@ -1117,7 +1138,7 @@ public class UserProfilePanel extends JPanel {
         weightField.setText("");
         targetWeightField.setText("");
         fitnessGoalBox.setSelectedIndex(0);
-        healthNotesArea.setText("无特殊疾病史");
+        healthNotesArea.setText("无特殊备注");
         noHealthIssuesBox.setSelected(true);
         hypertensionBox.setSelected(false);
         diabetesBox.setSelected(false);
