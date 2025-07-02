@@ -624,9 +624,7 @@ public class DatabaseManager {
             
         } catch (SQLException e) {
             System.err.println("运动计划插入失败: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, 
-                "保存运动计划失败:\n" + e.getMessage(), 
-                "数据库错误", JOptionPane.ERROR_MESSAGE);
+            // 不弹窗，只打印日志
         }
         
         return false;
@@ -651,9 +649,7 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             System.err.println("运动计划更新失败: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, 
-                "更新运动计划失败:\n" + e.getMessage(), 
-                "数据库错误", JOptionPane.ERROR_MESSAGE);
+            // 不弹窗，只打印日志
         }
         return false;
     }

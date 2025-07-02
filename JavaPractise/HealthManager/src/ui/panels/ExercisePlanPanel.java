@@ -358,6 +358,7 @@ public class ExercisePlanPanel extends JPanel {
         addPlanButton.addActionListener(e -> {
             if (!checkUnsavedChanges()) return;
             clearForm();
+            planTable.clearSelection(); // 新增：清除表格选中状态
             editingPlanId = -1;
             saveButton.setText("保存计划");
             statusLabel.setText("请填写新的运动计划");
@@ -372,8 +373,9 @@ public class ExercisePlanPanel extends JPanel {
             }
             
             ExercisePlan plan = currentPlans.get(selectedRow);
+            String dateStr = plan.getPlanDateString();
             int result = JOptionPane.showConfirmDialog(this,
-                    String.format("确定要删除计划 \"%s\" 吗？", plan.getExerciseType()),
+                    String.format("确定要删除计划 \"%s\" 这一条记录吗？", dateStr),
                     "确认删除",
                     JOptionPane.YES_NO_OPTION);
             
@@ -393,6 +395,7 @@ public class ExercisePlanPanel extends JPanel {
         cancelEditButton.addActionListener(e -> {
             if (checkUnsavedChanges()) {
                 clearForm();
+                planTable.clearSelection(); // 新增：清除表格选中状态
                 editingPlanId = -1;
                 saveButton.setText("保存计划");
                 statusLabel.setText("已取消编辑");
@@ -668,7 +671,11 @@ public class ExercisePlanPanel extends JPanel {
             refreshPlanTable();
             hasUnsavedChanges = false;
         } else {
-            JOptionPane.showMessageDialog(this, "保存计划失败", "错误", JOptionPane.ERROR_MESSAGE);
+            // 新增：更友好的重复记录提示
+            // 检查是否为唯一性约束错误
+            // 由于insert/update方法返回false时无法直接获取SQLException，这里建议在DatabaseManager.insertExercisePlan/updateExercisePlan中也做类似处理
+            // 但此处可做兜底提示
+            JOptionPane.showMessageDialog(this, "保存计划失败，可能是该日期已存在记录，请勿重复添加！", "错误", JOptionPane.ERROR_MESSAGE);
         }
     }
     

@@ -379,7 +379,7 @@ public class UserProfilePanel extends JPanel {
         gbc.gridx = 2; gbc.fill = GridBagConstraints.NONE;
         JButton autoDateButton = new JButton("自动计算");
         autoDateButton.setFont(getChineseFont(Font.PLAIN, 10));
-        autoDateButton.addActionListener(e -> calculateSuggestedTargetDate());
+        autoDateButton.addActionListener(e -> calculateSuggestedTargetDate(true));
         panel.add(autoDateButton, gbc);
         
         // 第三行：进度条
@@ -503,7 +503,24 @@ public class UserProfilePanel extends JPanel {
         
         // 按钮事件
         saveButton.addActionListener(e -> saveUserProfile());
-        calculateButton.addActionListener(e -> calculateAll());
+        calculateButton.addActionListener(e -> {
+            try {
+                double currentWeight = Double.parseDouble(weightField.getText().trim());
+                double targetWeight = Double.parseDouble(targetWeightField.getText().trim());
+                String fitnessGoal = (String) fitnessGoalBox.getSelectedItem();
+                double height = Double.parseDouble(heightField.getText().trim());
+                if (!isGoalConsistent(currentWeight, targetWeight, fitnessGoal, height)) {
+                    JOptionPane.showMessageDialog(this, "当前体重、目标体重与健身目标不合理，请检查输入！", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "请填写完整且有效的体重、目标体重和身高！", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            validateAndCalculate();      // 校验并刷新BMI等
+            calculateSuggestedTargetDate(false); // 自动推算目标日期但不弹窗
+            JOptionPane.showMessageDialog(this, "已经重新计算成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        });
         clearButton.addActionListener(e -> clearAll(true));
         reportButton.addActionListener(e -> showReport());
         resetPasswordButton.addActionListener(e -> onResetPassword());
@@ -793,9 +810,10 @@ public class UserProfilePanel extends JPanel {
      * 获取BMI对应的颜色
      */
     private Color getBMIColor(double bmi) {
-        if (bmi < 18.5 || bmi >= 28.0) return Color.RED;
-        if (bmi < 20.0 || bmi >= 25.0) return Color.ORANGE;
-        return new Color(0, 150, 0);
+        if (bmi < 18.5) return Color.RED;           // 偏瘦
+        if (bmi < 24.0) return new Color(0, 150, 0); // 正常（绿色）
+        if (bmi < 28.0) return Color.ORANGE;        // 超重（橙色）
+        return Color.RED;                           // 肥胖
     }
     
     /**
@@ -839,7 +857,7 @@ public class UserProfilePanel extends JPanel {
     /**
      * 计算建议目标日期
      */
-    private void calculateSuggestedTargetDate() {
+    private void calculateSuggestedTargetDate(boolean showDialog) {
         try {
             String weightText = weightField.getText().trim();
             String targetText = targetWeightField.getText().trim();
@@ -856,16 +874,20 @@ public class UserProfilePanel extends JPanel {
                 LocalDate suggestedDate = LocalDate.now().plusWeeks(weeksNeeded);
                 targetDateField.setText(suggestedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
                 
-                JOptionPane.showMessageDialog(this, 
-                    String.format("建议在 %d 周内达成目标\n每周%s约 %.1fkg", 
-                                 weeksNeeded, 
-                                 targetWeight < currentWeight ? "减重" : "增重",
-                                 weeklyRate),
-                    "目标日期建议", 
-                    JOptionPane.INFORMATION_MESSAGE);
+                if (showDialog) {
+                    JOptionPane.showMessageDialog(this,
+                        String.format("建议在 %d 周内达成目标\n每周%s约 %.1fkg",
+                            weeksNeeded,
+                            targetWeight < currentWeight ? "减重" : "增重",
+                            weeklyRate),
+                        "目标日期建议",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "请先填写当前体重和目标体重！", "提示", JOptionPane.WARNING_MESSAGE);
+            if (showDialog) {
+                JOptionPane.showMessageDialog(this, "请先填写当前体重和目标体重！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
         }
     }
     
@@ -1236,11 +1258,13 @@ public class UserProfilePanel extends JPanel {
         } else {
             UserProfile currentUserProfile = service.SessionManager.getCurrentProfile();
             if (currentUserProfile != null) {
+                // 从数据库获取最新档案
+                UserProfile dbProfile = service.DatabaseManager.getUserProfileByName(currentUserProfile.getName());
                 userList = new java.util.ArrayList<>();
-                userList.add(currentUserProfile);
-                userComboBox.setModel(new DefaultComboBoxModel<>(new UserProfile[]{currentUserProfile}));
-                userComboBox.setSelectedItem(currentUserProfile);
-                userComboBox.setEnabled(false);
+                userList.add(dbProfile);
+                userComboBox.setModel(new DefaultComboBoxModel<>(new UserProfile[]{dbProfile}));
+                userComboBox.setSelectedItem(dbProfile);
+                userComboBox.setEnabled(true);
                 userComboBox.setVisible(true);
                 addButton.setVisible(false);
                 deleteButton.setVisible(false);
@@ -1265,5 +1289,22 @@ public class UserProfilePanel extends JPanel {
         }
         ResetPasswordDialog dialog = new ResetPasswordDialog((Frame) SwingUtilities.getWindowAncestor(this), selected.getName());
         dialog.setVisible(true);
+    }
+    
+    // 健身目标合理性校验
+    private boolean isGoalConsistent(double currentWeight, double targetWeight, String fitnessGoal, double height) {
+        double bmi = (height > 0) ? currentWeight / Math.pow(height / 100.0, 2) : 0.0;
+        if (fitnessGoal != null && (fitnessGoal.contains("增肌") || fitnessGoal.contains("增重"))) {
+            if (currentWeight >= targetWeight) return false;
+            if (bmi >= 24.0) return false; // 超重及以上不建议增肌
+        }
+        if (fitnessGoal != null && (fitnessGoal.contains("减脂") || fitnessGoal.contains("减重"))) {
+            if (currentWeight <= targetWeight) return false;
+            if (bmi < 18.5) return false; // 偏瘦不建议减脂
+        }
+        if (fitnessGoal != null && fitnessGoal.contains("维持")) {
+            if (Math.abs(currentWeight - targetWeight) > 2) return false;
+        }
+        return true;
     }
 } 
