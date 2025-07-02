@@ -1,0 +1,77 @@
+@startuml
+' 增强关联线可读性：加粗+红色箭头
+skinparam defaultFontName Arial
+skinparam classFontSize 14
+skinparam classArrowColor #FF0000
+skinparam classArrowThickness 2.0
+
+class User {
+  - id: int
+  - username: String
+  - password: String
+  - role: String
+  - isActive: boolean
+}
+
+class UserProfile {
+  - id: int
+  - name: String
+  - age: int
+  - gender: String
+  - height: double
+  - weight: double
+  - targetWeight: double
+}
+
+class DailyRecord {
+  - id: int
+  - userName: String
+  - date: LocalDate
+  - weight: double
+  - exercise: String
+}
+
+class ExercisePlan {
+  - id: int
+  - userName: String
+  - exerciseType: String
+  - planDate: LocalDate
+  - duration: Double
+}
+
+class DietRecord {
+  - id: int
+  - userName: String
+  - recordDate: LocalDate
+  - breakfast: String
+  - lunch: String
+  - dinner: String
+}
+
+class DietStats {
+  - userName: String
+  - totalRecords: int
+  - recordFrequency: double
+}
+
+class ExerciseStats {
+  - userName: String
+  - totalPlans: int
+  - completionRate: double
+}
+
+class HealthStats {
+  - userName: String
+  - currentBMI: double
+  - healthScore: String
+}
+
+' 增强关联关系：红色+加粗+箭头样式
+User "1" --[#red,bold,thickness=2]-> "1" UserProfile
+UserProfile "1" --[#red,bold,thickness=2]-> "*" DailyRecord
+UserProfile "1" --[#red,bold,thickness=2]-> "*" ExercisePlan
+UserProfile "1" --[#red,bold,thickness=2]-> "*" DietRecord
+UserProfile "1" --[#red,bold,thickness=2]-> "1" DietStats
+UserProfile "1" --[#red,bold,thickness=2]-> "1" ExerciseStats
+UserProfile "1" --[#red,bold,thickness=2]-> "1" HealthStats
+@enduml

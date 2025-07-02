@@ -1,5 +1,6 @@
 package ui;
 
+import ui.dialog.LoginDialog;
 import ui.panels.UserProfilePanel;
 import ui.panels.DailyRecordPanel;
 import ui.panels.ExercisePlanPanel;
@@ -134,7 +135,7 @@ public class MainWindow extends JFrame {
                 // 关闭当前主窗口
                 MainWindow.this.dispose();
                 // 弹出登录对话框
-                boolean loginSuccess = ui.LoginDialog.showLoginDialog();
+                boolean loginSuccess = LoginDialog.showLoginDialog();
                 if (loginSuccess && service.SessionManager.isLoggedIn()) {
                     // 重新打开主窗口
                     SwingUtilities.invokeLater(() -> {

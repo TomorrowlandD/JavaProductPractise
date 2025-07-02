@@ -1,0 +1,25 @@
+@startuml
+hide fields
+
+class service.SessionManager {
+  + {static} boolean login(String, String)
+  + {static} void logout()
+  + {static} boolean isLoggedIn()
+  + {static} boolean isAdmin()
+  + {static} User getCurrentUser()
+}
+
+class service.DatabaseManager {
+  + {static} Connection getConnection()
+  + {static} boolean testConnection()
+  + {static} void initializeDatabase()
+  + {static} boolean saveUserProfile(UserProfile)
+  + {static} UserProfile loadUserProfile()
+  + {static} boolean saveDailyRecord(DailyRecord)
+  + {static} boolean insertExercisePlan(ExercisePlan)
+  + {static} boolean insertDietRecord(DietRecord)
+  + {static} User authenticateUser(String, String)
+  + {static} boolean createUser(String, String, String)
+}
+
+@enduml

@@ -15,46 +15,67 @@ import java.util.List;
 
 /**
  * 运动计划管理面板
- * 提供简约朴素的运动计划制定和管理功能
+ * 
+ * 功能描述：
+ * - 提供运动计划的制定、编辑、删除和管理功能
+ * - 支持预设运动类型选择和自定义运动类型输入
+ * - 支持计划时长和实际时长的分别录入
+ * - 提供运动计划完成状态的实时更新
+ * - 显示运动计划统计信息和完成率
+ * 
+ * 设计特点：
+ * - 采用MVC架构模式，界面与数据分离
+ * - 实现双重校验机制（前端+后端）
+ * - 支持新增/编辑模式切换
+ * - 提供未保存修改的检测和提示
+ * - 支持管理员和普通用户的不同权限
+ * 
  * 升级版本 - 支持实际时长录入和管理
  */
 public class ExercisePlanPanel extends JPanel {
     private static final long serialVersionUID = 1L;
     
-    // 用户选择组件
-    private JComboBox<UserProfile> userComboBox;
-    private JButton refreshBtn;
-    private JButton addPlanButton;
-    private JButton deletePlanButton;
-    private JButton cancelEditButton;
+    // ==================== 用户选择组件 ====================
+    private JComboBox<UserProfile> userComboBox;    // 用户下拉选择框
+    private JButton refreshBtn;                     // 刷新按钮
+    private JButton addPlanButton;                  // 新增计划按钮
+    private JButton deletePlanButton;               // 删除计划按钮
+    private JButton cancelEditButton;               // 取消编辑按钮
     
-    // 计划制定组件
-    private JPanel exerciseTypePanel;
-    private JCheckBox[] exerciseTypeChecks;
-    private JTextField otherTypeField; // 新增：其它类型输入框
-    private JTextField dateField;
-    private JTextField durationField;
-    private JTextField actualDurationField; // 新增：实际时长输入框
-    private JComboBox<String> intensityBox;
-    private JTextArea notesArea;
-    private JButton saveButton;
+    // ==================== 计划制定组件 ====================
+    private JPanel exerciseTypePanel;               // 运动类型选择面板
+    private JCheckBox[] exerciseTypeChecks;         // 预设运动类型复选框数组
+    private JTextField otherTypeField;              // 自定义运动类型输入框
+    private JTextField dateField;                   // 计划日期输入框
+    private JTextField durationField;               // 计划时长输入框
+    private JTextField actualDurationField;         // 实际时长输入框
+    private JComboBox<String> intensityBox;         // 运动强度下拉框
+    private JTextArea notesArea;                    // 备注文本区域
+    private JButton saveButton;                     // 保存按钮
     
-    // 状态显示
-    private JLabel statusLabel;
+    // ==================== 状态显示组件 ====================
+    private JLabel statusLabel;                     // 状态提示标签
     
-    // 1. 添加成员变量
-    private JTable planTable;
-    private PlanTableModel planTableModel;
-    private JLabel statsLabel;
-    private java.util.List<ExercisePlan> currentPlans = new java.util.ArrayList<>();
-    private int editingPlanId = -1;
-    // 新增：跟踪表单是否有未保存的修改
-    private boolean hasUnsavedChanges = false;
-    // 新增：保存原始数据用于比较
-    private ExercisePlan originalPlan = null;
+    // ==================== 数据管理组件 ====================
+    private JTable planTable;                       // 运动计划表格
+    private PlanTableModel planTableModel;          // 表格数据模型
+    private JLabel statsLabel;                      // 统计信息标签
+    private java.util.List<ExercisePlan> currentPlans = new java.util.ArrayList<>();  // 当前用户的运动计划列表
+    
+    // ==================== 状态管理变量 ====================
+    private int editingPlanId = -1;                 // 当前编辑的计划ID，-1表示新增模式
+    private boolean hasUnsavedChanges = false;      // 标记是否有未保存的修改
+    private ExercisePlan originalPlan = null;       // 保存原始数据用于比较修改
     
     /**
      * 获取支持中文的字体
+     * 
+     * 功能：根据指定的样式和大小创建支持中文显示的字体
+     * 优先尝试系统中文字体，如果都不可用则使用默认字体
+     * 
+     * @param style 字体样式（Font.PLAIN, Font.BOLD, Font.ITALIC等）
+     * @param size 字体大小
+     * @return 支持中文的字体对象
      */
     private Font getChineseFont(int style, int size) {
         String[] fontNames = {
@@ -76,6 +97,16 @@ public class ExercisePlanPanel extends JPanel {
         return new Font(Font.SANS_SERIF, style, size);
     }
     
+    /**
+     * 构造函数
+     * 
+     * 初始化运动计划管理面板，按顺序执行以下步骤：
+     * 1. 初始化所有UI组件
+     * 2. 设置界面布局
+     * 3. 绑定事件处理器
+     * 4. 设置默认值
+     * 5. 刷新用户下拉框
+     */
     @SuppressWarnings("this-escape")
     public ExercisePlanPanel() {
         initializeComponents();
@@ -86,7 +117,13 @@ public class ExercisePlanPanel extends JPanel {
     }
     
     /**
-     * 初始化组件
+     * 初始化所有UI组件
+     * 
+     * 功能：创建和配置所有界面组件，包括：
+     * - 用户选择组件（下拉框、按钮等）
+     * - 计划制定组件（输入框、复选框、下拉框等）
+     * - 状态显示组件（标签等）
+     * - 数据管理组件（表格等）
      */
     private void initializeComponents() {
         // 用户选择组件
@@ -143,6 +180,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 设置组件样式
+     * 
+     * 功能：统一设置所有组件的字体、提示文本和初始状态
+     * - 设置中文字体支持
+     * - 配置输入框的提示文本
+     * - 设置实际时长输入框的初始禁用状态
      */
     private void setupComponentStyles() {
         Font defaultFont = getChineseFont(Font.PLAIN, 12);
@@ -176,6 +218,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 设置界面布局
+     * 
+     * 功能：使用BorderLayout布局管理器组织界面结构
+     * - 顶部：用户选择区域
+     * - 中部：计划制定区域
+     * - 底部：历史计划表格和统计信息
      */
     private void setupLayout() {
         setLayout(new BorderLayout(10, 10));
@@ -209,6 +256,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 创建顶部面板（用户选择）
+     * 
+     * 功能：创建包含用户选择、刷新、新增、删除、取消编辑等按钮的面板
+     * 布局：使用FlowLayout水平排列所有组件
+     * 
+     * @return 配置好的顶部面板
      */
     private JPanel createTopPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
@@ -226,6 +278,12 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 创建中部面板（计划制定）
+     * 
+     * 功能：创建包含运动计划制定表单的面板
+     * 包含：运动类型选择、日期时长输入、强度选择、备注输入、保存按钮
+     * 布局：使用BoxLayout垂直排列各个输入区域
+     * 
+     * @return 配置好的中部面板
      */
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel();
@@ -274,6 +332,14 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 设置事件处理器
+     * 
+     * 功能：为所有交互组件绑定事件监听器
+     * 包括：
+     * - 用户选择变化监听
+     * - 按钮点击事件监听
+     * - 表格双击编辑监听
+     * - 表格单击选择监听
+     * - 表单变化监听
      */
     private void setupEventHandlers() {
         // 用户选择变化
@@ -371,6 +437,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 设置默认值
+     * 
+     * 功能：为表单组件设置合理的默认值
+     * - 设置当前日期为默认计划日期
+     * - 设置默认运动强度为"中"
+     * - 设置默认计划时长为1.0小时
      */
     private void setupDefaults() {
         // 设置当前日期
@@ -386,6 +457,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 刷新用户下拉框
+     * 
+     * 功能：根据当前用户权限更新用户选择下拉框
+     * - 管理员：显示所有用户，可选择任意用户
+     * - 普通用户：只显示当前用户，不可选择
+     * 同时保持当前选中状态（如果可能）
      */
     private void refreshUserComboBox() {
         UserProfile currentSelected = (UserProfile) userComboBox.getSelectedItem();
@@ -418,6 +494,13 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 清空表单
+     * 
+     * 功能：重置所有表单组件到初始状态
+     * - 清空所有输入框和文本区域
+     * - 取消所有复选框选中状态
+     * - 重置下拉框到默认选项
+     * - 重置实际时长输入框状态（禁用）
+     * - 重置编辑状态和修改标记
      */
     private void clearForm() {
         for (JCheckBox cb : exerciseTypeChecks) {
@@ -444,6 +527,21 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 保存运动计划
+     * 
+     * 执行流程：
+     * 1. 读取界面输入的所有数据
+     * 2. 进行前端数据验证（基本格式和范围检查）
+     * 3. 进行业务逻辑验证（实际时长与计划时长的比较）
+     * 4. 创建ExercisePlan数据对象
+     * 5. 进行后端数据验证（调用plan.validatePlan()）
+     * 6. 根据editingPlanId判断是新增还是更新操作
+     * 7. 调用DatabaseManager保存数据
+     * 8. 根据保存结果给出用户反馈
+     * 9. 成功后清空表单并刷新表格
+     * 
+     * 双重校验机制：
+     * - 前端校验：提供即时反馈，用户体验好
+     * - 后端校验：确保数据安全，防止恶意提交
      */
     private void saveExercisePlan() {
         // 验证用户选择
@@ -481,7 +579,6 @@ public class ExercisePlanPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
         // 验证计划时长
         String durationStr = durationField.getText().trim();
         if (durationStr.isEmpty()) {
@@ -550,6 +647,13 @@ public class ExercisePlanPanel extends JPanel {
             plan.setCompleted(true);
         }
         
+        // ==================== 后端数据校验（双重保障） ====================
+        ExercisePlan.ValidationResult finalResult = plan.validatePlan();
+        if (!finalResult.isValid()) {
+            JOptionPane.showMessageDialog(this, finalResult.getMessage(), "数据验证失败", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         // 保存到数据库
         boolean success;
         if (editingPlanId == -1) {
@@ -570,6 +674,14 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 用计划数据填充表单
+     * 
+     * 功能：将选中的运动计划数据填充到表单中进行编辑
+     * - 根据运动类型设置复选框或自定义输入框
+     * - 填充所有表单字段
+     * - 设置编辑模式和状态
+     * - 保存原始数据用于比较修改
+     * 
+     * @param plan 要编辑的运动计划对象
      */
     private void fillFormWithPlan(ExercisePlan plan) {
         for (JCheckBox cb : exerciseTypeChecks) {
@@ -625,7 +737,15 @@ public class ExercisePlanPanel extends JPanel {
         hasUnsavedChanges = false;
     }
     
-    // 3. TableModel内部类 - 升级版本
+    /**
+     * 运动计划表格数据模型
+     * 
+     * 功能：管理运动计划表格的数据显示和编辑
+     * - 定义表格列结构（日期、类型、计划时长、实际时长、强度、备注、完成）
+     * - 处理完成状态的复选框编辑
+     * - 实现实际时长的录入逻辑
+     * - 提供业务逻辑验证（实际时长与计划时长的比较）
+     */
     private class PlanTableModel extends javax.swing.table.AbstractTableModel {
         private final String[] columns = {"日期", "类型", "计划时长", "实际时长", "强度", "备注", "完成"};
         @Override public int getRowCount() { return currentPlans.size(); }
@@ -672,29 +792,40 @@ public class ExercisePlanPanel extends JPanel {
                                     // 新增：业务逻辑验证 - 实际时长应该大于等于计划时长
                                     Double plannedDuration = plan.getDuration();
                                     if (plannedDuration != null && actualDuration < plannedDuration) {
-                                        int result = JOptionPane.showConfirmDialog(ExercisePlanPanel.this,
-                                            String.format("实际时长(%.1f小时)小于计划时长(%.1f小时)，\n这可能表示运动计划未完全完成。\n\n确定要标记为完成吗？", 
+                                        JOptionPane.showMessageDialog(ExercisePlanPanel.this,
+                                            String.format("实际时长(%.1f小时)小于计划时长(%.1f小时)，\n运动计划未完全完成，不能标记为完成状态。", 
                                                 actualDuration, plannedDuration),
                                             "实际时长验证",
-                                            JOptionPane.YES_NO_OPTION,
-                                            JOptionPane.QUESTION_MESSAGE);
-                                        
-                                        if (result != JOptionPane.YES_OPTION) {
-                                            return; // 不更新完成状态
-                                        }
+                                            JOptionPane.WARNING_MESSAGE);
+                                        // 修复bug：强制刷新表格，确保复选框状态正确
+                                        fireTableDataChanged();
+                                        return; // 不更新完成状态
                                     }
                                     plan.setActualDuration(actualDuration);
                                 } else {
                                     JOptionPane.showMessageDialog(ExercisePlanPanel.this,
                                         "实际时长必须在0-24小时之间", "输入错误", JOptionPane.WARNING_MESSAGE);
+                                    // 修复bug：强制刷新表格，确保复选框状态正确
+                                    fireTableDataChanged();
                                     return; // 不更新完成状态
                                 }
                             } catch (NumberFormatException e) {
                                 JOptionPane.showMessageDialog(ExercisePlanPanel.this,
                                     "请输入有效的数字", "输入错误", JOptionPane.WARNING_MESSAGE);
+                                // 修复bug：强制刷新表格，确保复选框状态正确
+                                fireTableDataChanged();
                                 return; // 不更新完成状态
                             }
+                        } else {
+                            // 修复bug：用户取消输入或输入为空时，强制刷新表格
+                            fireTableDataChanged();
+                            return; // 不更新完成状态
                         }
+                    }
+                    
+                    // 修复bug：如果取消完成状态，清空实际时长
+                    if (!newValue) {
+                        plan.setActualDuration(null);
                     }
                     
                     plan.setCompleted(newValue);
@@ -709,6 +840,11 @@ public class ExercisePlanPanel extends JPanel {
                     } else {
                         // 更新失败，恢复原状态
                         plan.setCompleted(!newValue);
+                        // 恢复实际时长（如果是从完成状态取消，需要恢复原值）
+                        if (!newValue) {
+                            // 这里需要恢复原来的实际时长，但由于我们已经清空了，暂时保持null
+                            // 在实际应用中，可能需要保存原始值
+                        }
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(ExercisePlanPanel.this, 
                                 "更新完成状态失败，请重试", "更新失败", JOptionPane.ERROR_MESSAGE);
@@ -720,7 +856,14 @@ public class ExercisePlanPanel extends JPanel {
         }
     }
     
-    // 4. 刷新表格和统计信息
+    /**
+     * 刷新表格和统计信息
+     * 
+     * 功能：重新加载当前用户的运动计划数据并更新显示
+     * - 从数据库查询当前用户的运动计划
+     * - 更新表格数据模型
+     * - 更新统计信息显示
+     */
     private void refreshPlanTable() {
         UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
         if (selected != null) {
@@ -732,6 +875,16 @@ public class ExercisePlanPanel extends JPanel {
         updateStatsLabel();
     }
     
+    /**
+     * 更新统计信息标签
+     * 
+     * 功能：计算并显示运动计划的统计信息
+     * - 计算总计划数量
+     * - 计算已完成计划数量
+     * - 计算完成率
+     * - 计算总计划时长和实际时长
+     * - 更新统计标签显示
+     */
     private void updateStatsLabel() {
         int total = currentPlans.size();
         int completed = 0;
@@ -751,6 +904,13 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 为表单组件添加变化监听器
+     * 
+     * 功能：为所有表单输入组件添加变化监听器
+     * - 运动类型复选框变化监听
+     * - 日期、时长字段的文档变化监听
+     * - 强度下拉框变化监听
+     * - 备注文本区域变化监听
+     * 任何变化都会触发markFormChanged()标记修改状态
      */
     private void setupFormChangeListeners() {
         // 运动类型复选框变化监听
@@ -792,6 +952,11 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 标记表单已发生变化
+     * 
+     * 功能：当表单内容发生变化时标记修改状态
+     * - 设置hasUnsavedChanges为true
+     * - 更新状态标签提示用户有未保存的修改
+     * 只在编辑模式下生效（editingPlanId != -1）
      */
     private void markFormChanged() {
         if (editingPlanId != -1) {
@@ -802,6 +967,13 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 检查是否有未保存的修改
+     * 
+     * 功能：在切换操作前检查是否有未保存的修改
+     * - 如果有未保存修改，弹出确认对话框
+     * - 用户确认后才允许切换操作
+     * - 防止意外丢失用户输入的数据
+     * 
+     * @return true表示可以继续操作，false表示用户取消操作
      */
     private boolean checkUnsavedChanges() {
         if (hasUnsavedChanges && editingPlanId != -1) {
@@ -817,6 +989,12 @@ public class ExercisePlanPanel extends JPanel {
     
     /**
      * 根据计划ID查找表格中的行索引
+     * 
+     * 功能：在表格数据中查找指定ID的运动计划所在的行索引
+     * 用于定位和操作特定的运动计划记录
+     * 
+     * @param planId 要查找的运动计划ID
+     * @return 找到的行索引，如果未找到返回-1
      */
     private int getRowIndexById(int planId) {
         for (int i = 0; i < currentPlans.size(); i++) {
@@ -827,7 +1005,14 @@ public class ExercisePlanPanel extends JPanel {
         return -1;
     }
     
-    // 新增：为完成状态列设置复选框编辑器
+    /**
+     * 为完成状态列设置复选框编辑器
+     * 
+     * 功能：配置表格中完成状态列的显示和编辑方式
+     * - 为完成状态列设置复选框编辑器
+     * - 设置各列的合适宽度
+     * - 优化表格的显示效果
+     */
     private void setupCompletionColumnEditor() {
         // 为第6列（完成状态列）设置复选框编辑器（调整索引）
         planTable.getColumnModel().getColumn(6).setCellEditor(

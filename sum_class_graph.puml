@@ -1,0 +1,48 @@
+@startuml
+' 简化布局：合并面板类，突出三类核心组件关系
+
+' 设置布局方向为水平
+left to right direction
+
+' 定义抽象类和接口样式
+skinparam class {
+    AbstractBackgroundColor LightGray
+    InterfaceBackgroundColor LightBlue
+    BackgroundColor LightYellow
+}
+
+' 基类定义
+class JFrame <<abstract>>
+class JPanel <<abstract>>
+class JDialog <<abstract>>
+
+' 核心组件类
+class MainWindow {
+    +showPanel(Panel)
+    +openDialog(Dialog)
+}
+
+class BasePanel <<abstract>> {
+    #mainWindow : MainWindow
+    +updateUI()
+}
+
+class BaseDialog <<abstract>> {
+    #mainWindow : MainWindow
+    +onClose()
+}
+
+' 继承关系
+JFrame <|-- MainWindow : 继承
+JPanel <|-- BasePanel : 继承
+JDialog <|-- BaseDialog : 继承
+
+' 组合与依赖关系
+MainWindow *-- BasePanel : 包含 0..*
+MainWindow *-- BaseDialog : 使用 0..*
+BasePanel "1" --> "1" MainWindow : 引用
+BaseDialog "1" --> "1" MainWindow : 引用
+
+' 优化视觉效果
+note "核心UI组件关系" as N1
+@enduml

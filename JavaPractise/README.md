@@ -123,10 +123,12 @@ private static final String PASSWORD = "your_password";
 # 进入项目目录
 cd HealthManager
 
-# 编译Java文件
-javac -cp "lib/mysql-connector-j-9.3.0.jar" -d classes src/*.java src/model/*.java src/service/*.java src/ui/*.java src/ui/panels/*.java
+# 编译Java文件（包含所有子包）
+javac -cp "lib/mysql-connector-j-9.3.0.jar" -d classes src/*.java src/model/*.java src/service/*.java src/ui/*.java src/ui/dialog/*.java src/ui/panels/*.java
 
-# 运行程序
+# 运行程序（Windows 下用分号 ;，Linux/macOS 下用冒号 :）
 java -cp "classes;lib/mysql-connector-j-9.3.0.jar" Main
+# 或（Linux/macOS）
+# java -cp "classes:lib/mysql-connector-j-9.3.0.jar" Main
 ```
 

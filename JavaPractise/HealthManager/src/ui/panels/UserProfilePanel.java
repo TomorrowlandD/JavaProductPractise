@@ -1,8 +1,8 @@
 package ui.panels;
 
 import model.UserProfile;
-import ui.AddUserDialog;
-import ui.ResetPasswordDialog;
+import ui.dialog.AddUserDialog;
+import ui.dialog.ResetPasswordDialog;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -1165,6 +1165,8 @@ public class UserProfilePanel extends JPanel {
      * 显示报告
      */
     private void showReport() {
+        // 自动刷新currentProfile为最新界面数据，确保报告内容与界面一致
+        currentProfile = getProfileFromUI();
         if (currentProfile != null && currentProfile.isProfileComplete()) {
             StringBuilder report = new StringBuilder();
             report.append("=== 个人健康档案报告 ===\n\n");

@@ -5,12 +5,12 @@ import model.UserProfile;
 import service.DatabaseManager;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import javax.swing.table.DefaultTableModel;
 
 /**
  * 每日健康记录管理面板
@@ -216,19 +216,18 @@ public class DailyRecordPanel extends JPanel {
      * 
      * 执行流程：
      * 1. 读取界面输入的所有数据
-     * 2. 进行多重数据验证（用户选择、重复记录、日期范围、数值范围等）
-     * 3. 创建DailyRecord数据对象
-     * 4. 根据editingRecordId判断是新增还是更新操作
-     * 5. 调用DatabaseManager保存数据
-     * 6. 根据保存结果给出用户反馈
-     * 7. 成功后清空表单并刷新表格
+     * 2. 进行前端数据验证（调用DailyRecord的静态校验方法）
+     * 3. 进行业务逻辑验证（重复记录检查）
+     * 4. 创建DailyRecord数据对象
+     * 5. 进行后端数据验证（调用record.validateRecord()）
+     * 6. 根据editingRecordId判断是新增还是更新操作
+     * 7. 调用DatabaseManager保存数据
+     * 8. 根据保存结果给出用户反馈
+     * 9. 成功后清空表单并刷新表格
      * 
-     * 数据验证规则：
-     * - 必须选择用户
-     * - 日期不能重复（同一用户同一日期只能有一条记录）
-     * - 日期范围：2020-01-01 到 今天
-     * - 运动时长和睡眠时长：0-24小时
-     * - 所有数值字段必须为有效数字
+     * 双重校验机制：
+     * - 前端校验：提供即时反馈，用户体验好
+     * - 后端校验：确保数据安全，防止恶意提交
      * 
      * @param e 按钮点击事件对象
      */
@@ -241,11 +240,45 @@ public class DailyRecordPanel extends JPanel {
                 return;
             }
             
-            // ==================== 第二步：读取并验证日期数据 ====================
+            // ==================== 第二步：读取数据 ====================
             LocalDate date = LocalDate.parse(dateField.getText().trim());
+            double weight = Double.parseDouble(weightField.getText().trim());
+            String exercise = exerciseField.getText().trim();
+            double exerciseDuration = Double.parseDouble(exerciseDurationField.getText().trim());
+            double sleepDuration = Double.parseDouble(sleepDurationField.getText().trim());
+            String mood = (String) moodBox.getSelectedItem();
+            String note = noteArea.getText().trim();
             
-            // 重复记录验证：检查该用户该日期是否已存在记录
-            // editingRecordId为-1表示新增，>0表示编辑现有记录
+            // ==================== 第三步：前端数据校验（调用DailyRecord的静态方法） ====================
+            // 验证日期
+            DailyRecord.ValidationResult dateResult = DailyRecord.validateDate(date);
+            if (!dateResult.isValid()) {
+                JOptionPane.showMessageDialog(this, dateResult.getMessage(), "日期错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // 验证体重
+            DailyRecord.ValidationResult weightResult = DailyRecord.validateWeight(weight);
+            if (!weightResult.isValid()) {
+                JOptionPane.showMessageDialog(this, weightResult.getMessage(), "体重错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // 验证运动时长
+            DailyRecord.ValidationResult exerciseResult = DailyRecord.validateExerciseDuration(exerciseDuration);
+            if (!exerciseResult.isValid()) {
+                JOptionPane.showMessageDialog(this, exerciseResult.getMessage(), "运动时长错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // 验证睡眠时长
+            DailyRecord.ValidationResult sleepResult = DailyRecord.validateSleepDuration(sleepDuration);
+            if (!sleepResult.isValid()) {
+                JOptionPane.showMessageDialog(this, sleepResult.getMessage(), "睡眠时长错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // ==================== 第四步：业务逻辑验证（重复记录检查） ====================
             List<DailyRecord> records = DatabaseManager.getDailyRecordsByUser(selectedUser.getName());
             boolean exists = records.stream().anyMatch(r ->
                 r.getDate().equals(date)
@@ -256,39 +289,6 @@ public class DailyRecordPanel extends JPanel {
                 return;
             }
             
-            // 日期范围验证：不能记录未来的健康数据
-            LocalDate minDate = LocalDate.of(2020, 1, 1);  // 最早记录日期
-            LocalDate maxDate = LocalDate.now();  // 最晚记录日期（今天）
-            if (date.isBefore(minDate)) {
-                JOptionPane.showMessageDialog(this, "日期不能早于2020-01-01！", "日期错误", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            if (date.isAfter(maxDate)) {
-                JOptionPane.showMessageDialog(this, "不能记录未来的健康数据！\n体重、睡眠等数据只能记录今天或过去的数据。", "日期错误", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // ==================== 第三步：读取并验证数值数据 ====================
-            double weight = Double.parseDouble(weightField.getText().trim());
-            String exercise = exerciseField.getText().trim();
-            double exerciseDuration = Double.parseDouble(exerciseDurationField.getText().trim());
-            double sleepDuration = Double.parseDouble(sleepDurationField.getText().trim());
-            
-            // 运动时长范围验证：0-24小时
-            if (exerciseDuration < 0 || exerciseDuration > 24) {
-                JOptionPane.showMessageDialog(this, "运动时长应在0~24小时之间！", "错误", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            // 睡眠时长范围验证：0-24小时
-            if (sleepDuration < 0 || sleepDuration > 24) {
-                JOptionPane.showMessageDialog(this, "睡眠时长应在0~24小时之间！", "错误", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // ==================== 第四步：读取其他数据 ====================
-            String mood = (String) moodBox.getSelectedItem();
-            String note = noteArea.getText().trim();
-
             // ==================== 第五步：创建数据对象 ====================
             DailyRecord record = new DailyRecord();
             record.setUserName(selectedUser.getName());
@@ -300,7 +300,14 @@ public class DailyRecordPanel extends JPanel {
             record.setMood(mood);
             record.setNote(note);
             
-            // ==================== 第六步：保存到数据库 ====================
+            // ==================== 第六步：后端数据校验（双重保障） ====================
+            DailyRecord.ValidationResult finalResult = record.validateRecord();
+            if (!finalResult.isValid()) {
+                JOptionPane.showMessageDialog(this, "数据验证失败：" + finalResult.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // ==================== 第七步：保存到数据库 ====================
             if (editingRecordId == -1) {
                 // 新增记录操作
                 boolean success = DatabaseManager.saveDailyRecord(record);

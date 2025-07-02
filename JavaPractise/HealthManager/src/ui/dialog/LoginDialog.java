@@ -1,6 +1,7 @@
-package ui;
+package ui.dialog;
 
 import service.SessionManager;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -56,7 +57,7 @@ public class LoginDialog extends JDialog {
         JPanel titlePanel = new JPanel();
         JLabel titleLabel = new JLabel("健康管理系统", JLabel.CENTER);
         titleLabel.setFont(getChineseFont(Font.BOLD, 18));
-        titleLabel.setForeground(new Color(51, 122, 183));
+        titleLabel.setForeground(new Color(60, 63, 65));
         titlePanel.add(titleLabel);
         add(titlePanel, BorderLayout.NORTH);
         // 中央输入面板

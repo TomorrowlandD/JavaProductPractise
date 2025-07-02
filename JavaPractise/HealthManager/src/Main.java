@@ -1,5 +1,5 @@
 import ui.MainWindow;
-import ui.LoginDialog;
+import ui.dialog.LoginDialog;
 import service.DatabaseManager;
 import service.SessionManager;
 import javax.swing.SwingUtilities;
@@ -34,4 +34,4 @@ public class Main {
             }
         });
     }
-} 
+}

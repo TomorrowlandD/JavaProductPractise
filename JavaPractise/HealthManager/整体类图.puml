@@ -1,0 +1,79 @@
+@startuml 健康管理系统整体类图
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam classFontName 微软雅黑
+skinparam arrowColor #2C3E50
+skinparam classBackgroundColor #ECF0F1
+skinparam classBorderColor #34495E
+
+' 定义抽象类
+class "主窗口类" as MainWindow {
+  + 创建和管理主窗口界面
+  + 包含5个功能标签页
+  + 处理用户登录登出
+}
+
+class "面板类" as Panels {
+  + 用户档案面板
+  + 每日记录面板
+  + 运动计划面板
+  + 饮食管理面板
+  + 数据分析面板
+}
+
+class "对话框类" as Dialogs {
+  + 登录对话框
+  + 注册对话框
+  + 添加用户对话框
+  + 重置密码对话框
+  + 修改密码对话框
+  + 删除账号对话框
+}
+
+class "实体类" as Entities {
+  + 用户(User)
+  + 用户档案(UserProfile)
+  + 每日记录(DailyRecord)
+  + 运动计划(ExercisePlan)
+  + 饮食记录(DietRecord)
+}
+
+class "统计类" as Statistics {
+  + 饮食统计(DietStats)
+  + 运动统计(ExerciseStats)
+  + 健康统计(HealthStats)
+}
+
+class "服务类" as Services {
+  + 数据库管理(DatabaseManager)
+  + 会话管理(SessionManager)
+}
+
+' 定义关系
+' 组合关系：主窗口包含面板
+MainWindow *-- Panels : 包含
+
+' 依赖关系：主窗口依赖对话框
+MainWindow ..> Dialogs : 调用
+
+' 依赖关系：面板依赖对话框
+Panels ..> Dialogs : 调用
+
+' 依赖关系：面板依赖实体类
+Panels ..> Entities : 数据操作
+
+' 依赖关系：对话框依赖服务类
+Dialogs ..> Services : 业务处理
+
+' 依赖关系：服务类依赖实体类
+Services ..> Entities : 数据持久化
+
+' 依赖关系：统计类依赖实体类
+Statistics ..> Entities : 数据计算
+
+' 依赖关系：服务类之间依赖
+Services ..> Services : 认证流程
+
+@enduml 
