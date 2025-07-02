@@ -505,14 +505,14 @@ public class DietPanel extends JPanel {
         StringBuilder sb = new StringBuilder();
         for (JCheckBox cb : checks) {
             if (cb.isSelected()) {
-                if (sb.length() > 0) sb.append(",");
+                if (sb.length() > 0) sb.append(", ");
                 sb.append(cb.getText());
             }
         }
         String other = otherField.getText().trim();
         if (!other.isEmpty()) {
-            if (sb.length() > 0) sb.append(",");
-            sb.append("其它:").append(other);
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(other); // 只拼接内容，不加"其它:"
         }
         return sb.toString();
     }

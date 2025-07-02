@@ -128,9 +128,8 @@ public class DataAnalysisPanel extends JPanel {
             DailyRecord latest = records.get(records.size() - 1);
             double latestWeight = latest.getWeight();
             double latestHeight = selectedUser.getHeight();
-            // 原始体重、身高
-            DailyRecord origin = records.get(0);
-            double originWeight = origin.getWeight();
+            // 原始体重、身高（改为用户档案中的weight和height）
+            double originWeight = selectedUser.getWeight();
             double originHeight = selectedUser.getHeight();
             // BMI
             double bmi = (latestHeight > 0) ? latestWeight / Math.pow(latestHeight / 100.0, 2) : 0.0;
@@ -139,7 +138,7 @@ public class DataAnalysisPanel extends JPanel {
             else if (bmi < 24.0) bmiLevel = "正常";
             else if (bmi < 28.0) bmiLevel = "超重";
             else bmiLevel = "肥胖";
-            // 原始BMI
+            // 原始BMI（用档案体重和身高计算）
             double originBmi = (originHeight > 0) ? originWeight / Math.pow(originHeight / 100.0, 2) : 0.0;
             String originBmiLevel;
             if (originBmi < 18.5) originBmiLevel = "偏瘦";
@@ -406,9 +405,37 @@ public class DataAnalysisPanel extends JPanel {
                 ) + 1;
             }
             double freq = totalDays > 0 ? (double) days / totalDays * 100 : 100.0;
+
+            // ===== 新增：本周、本月统计 =====
+            java.time.LocalDate today = java.time.LocalDate.now();
+            // 本周
+            java.time.LocalDate weekStart = today.with(java.time.DayOfWeek.MONDAY);
+            long weekCount = records.stream()
+                .map(DietRecord::getRecordDate)
+                .filter(d -> !d.isBefore(weekStart) && !d.isAfter(today))
+                .distinct()
+                .count();
+            int weekDays = today.getDayOfWeek().getValue(); // 周一=1, 周日=7
+            double weekFreq = weekDays > 0 ? (weekCount * 100.0 / weekDays) : 0;
+
+            // 本月
+            java.time.LocalDate monthStart = today.withDayOfMonth(1);
+            long monthCount = records.stream()
+                .map(DietRecord::getRecordDate)
+                .filter(d -> !d.isBefore(monthStart) && !d.isAfter(today))
+                .distinct()
+                .count();
+            int monthDays = today.getDayOfMonth();
+            double monthFreq = monthDays > 0 ? (monthCount * 100.0 / monthDays) : 0;
+
             // 展示
-            daysLabel.setText(String.format("本周期饮食记录天数：%d天", days));
-            freqLabel.setText(String.format("本周期记录频率：%.1f%%", freq));
+            daysLabel.setText(String.format(
+                "<html>本周期饮食记录天数：%d天，本周期记录频率：%.1f%%<br/>" +
+                "本周饮食记录天数：%d天，本周记录频率：%.1f%%<br/>" +
+                "本月饮食记录天数：%d天，本月记录频率：%.1f%%</html>",
+                days, freq, weekCount, weekFreq, monthCount, monthFreq
+            ));
+            freqLabel.setText(""); // freqLabel可留空或用于其他用途
             // 表格数据
             Object[][] data = new Object[records.size()][5];
             for (int i = 0; i < records.size(); i++) {
