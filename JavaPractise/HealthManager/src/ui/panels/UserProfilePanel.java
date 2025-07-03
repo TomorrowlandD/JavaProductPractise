@@ -904,6 +904,19 @@ public class UserProfilePanel extends JPanel {
      * 保存用户档案
      */
     private void saveUserProfile() {
+        // 只在普通用户模式下校验
+        if (!service.SessionManager.isAdmin()) {
+            String currentLoginName = service.SessionManager.getCurrentUser() != null
+                ? service.SessionManager.getCurrentUser().getUsername()
+                : null;
+            String inputName = nameField.getText().trim();
+            if (currentLoginName == null || !currentLoginName.equals(inputName)) {
+                JOptionPane.showMessageDialog(this,
+                    "您只能编辑和保存自己的档案信息，不能修改为其他用户名！",
+                    "操作无效", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
         try {
             // 首先验证年龄（从Spinner获取）
             int age = (Integer) ageSpinner.getValue();
@@ -1247,6 +1260,11 @@ public class UserProfilePanel extends JPanel {
      * 初始化用户下拉框
      */
     private void refreshUserComboBox() {
+        // 先移除所有监听器，防止刷新时触发事件
+        java.awt.event.ActionListener[] listeners = userComboBox.getActionListeners();
+        for (java.awt.event.ActionListener l : listeners) {
+            userComboBox.removeActionListener(l);
+        }
         if (service.SessionManager.isAdmin()) {
             userList = service.DatabaseManager.getAllUserProfiles();
             userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
@@ -1278,6 +1296,10 @@ public class UserProfilePanel extends JPanel {
                 deleteButton.setVisible(false);
                 resetPasswordButton.setVisible(false);
             }
+        }
+        // 刷新完后恢复监听器
+        for (java.awt.event.ActionListener l : listeners) {
+            userComboBox.addActionListener(l);
         }
     }
     

@@ -114,6 +114,7 @@ public class ExercisePlanPanel extends JPanel {
         setupEventHandlers();
         setupDefaults();
         refreshUserComboBox();
+        updateStatsLabel(); // 初始化时刷新统计
     }
     
     /**
@@ -236,21 +237,20 @@ public class ExercisePlanPanel extends JPanel {
         JPanel centerPanel = createCenterPanel();
         add(centerPanel, BorderLayout.CENTER);
         
-        // 新增底部历史计划表和统计
+        // 表格和统计信息
         planTableModel = new PlanTableModel();
         planTable = new JTable(planTableModel);
         planTable.setRowHeight(24);
-        
-        // 新增：为完成状态列设置复选框编辑器
         setupCompletionColumnEditor();
-        
         JScrollPane tableScroll = new JScrollPane(planTable);
         tableScroll.setPreferredSize(new Dimension(0, 180));
         statsLabel = new JLabel("统计：");
+        
+        // bottomPanel垂直排列：表格在上，统计信息在下
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
-        bottomPanel.add(tableScroll);
-        bottomPanel.add(statsLabel);
+        bottomPanel.add(tableScroll);    // 表格在上
+        bottomPanel.add(statsLabel);     // 统计信息在下
         add(bottomPanel, BorderLayout.SOUTH);
     }
     
@@ -265,14 +265,12 @@ public class ExercisePlanPanel extends JPanel {
     private JPanel createTopPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panel.setBorder(new TitledBorder("用户选择"));
-        
         panel.add(new JLabel("选择用户:"));
         panel.add(userComboBox);
         panel.add(refreshBtn);
         panel.add(addPlanButton);
         panel.add(deletePlanButton);
         panel.add(cancelEditButton);
-        
         return panel;
     }
     
@@ -385,6 +383,7 @@ public class ExercisePlanPanel extends JPanel {
                     refreshPlanTable();
                     clearForm();
                     editingPlanId = -1;
+                    updateStatsLabel(); // 删除成功后刷新统计
                 } else {
                     JOptionPane.showMessageDialog(this, "删除计划失败", "错误", JOptionPane.ERROR_MESSAGE);
                 }
@@ -456,6 +455,7 @@ public class ExercisePlanPanel extends JPanel {
         
         // 设置默认时长
         durationField.setText("1.0");
+        updateStatsLabel(); // 设置默认值后刷新统计
     }
     
     /**
@@ -670,6 +670,7 @@ public class ExercisePlanPanel extends JPanel {
             clearForm();
             refreshPlanTable();
             hasUnsavedChanges = false;
+            updateStatsLabel(); // 保存成功后刷新统计
         } else {
             // 新增：更友好的重复记录提示
             // 检查是否为唯一性约束错误
@@ -841,7 +842,6 @@ public class ExercisePlanPanel extends JPanel {
                         // 通过SwingUtilities.invokeLater确保在EDT中执行UI更新
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             statusLabel.setText("完成状态已更新");
-                            updateStatsLabel(); // 更新统计信息
                             fireTableDataChanged(); // 刷新整个表格以显示实际时长变化
                         });
                     } else {
@@ -879,7 +879,7 @@ public class ExercisePlanPanel extends JPanel {
             currentPlans = new java.util.ArrayList<>();
         }
         planTableModel.fireTableDataChanged();
-        updateStatsLabel();
+        updateStatsLabel(); // 每次刷新表格后刷新统计
     }
     
     /**
@@ -897,15 +897,13 @@ public class ExercisePlanPanel extends JPanel {
         int completed = 0;
         double totalPlannedHours = 0.0;
         double totalActualHours = 0.0;
-        
         for (ExercisePlan plan : currentPlans) {
             if (plan.isCompleted()) completed++;
             if (plan.getDuration() != null) totalPlannedHours += plan.getDuration();
             if (plan.getActualDuration() != null) totalActualHours += plan.getActualDuration();
         }
-        
         String rate = total > 0 ? String.format("%.0f%%", completed * 100.0 / total) : "0%";
-        statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s | 计划时长%.1f小时，实际时长%.1f小时", 
+        statsLabel.setText(String.format("统计：总计划%d条，已完成%d条，完成率%s | 计划时长%.1f小时，实际时长%.1f小时",
             total, completed, rate, totalPlannedHours, totalActualHours));
     }
     

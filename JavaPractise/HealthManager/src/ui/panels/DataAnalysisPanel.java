@@ -96,7 +96,6 @@ public class DataAnalysisPanel extends JPanel {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.add(statsPanel);
-        centerPanel.add(Box.createVerticalStrut(10));
         centerPanel.add(tableScroll);
         panel.add(centerPanel, BorderLayout.CENTER);
 
@@ -233,59 +232,54 @@ public class DataAnalysisPanel extends JPanel {
         panel.add(topPanel, BorderLayout.NORTH);
 
         // 统计区
-        JPanel statsPanel = new JPanel();
-        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
-        JLabel completionLabel = new JLabel();
-        JLabel activeDaysLabel = new JLabel();
-        statsPanel.add(completionLabel);
-        statsPanel.add(activeDaysLabel);
+        JLabel statsLabel = new JLabel();
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        statsPanel.add(statsLabel);
 
         // 表格区
         String[] columns = {"日期", "类型", "计划时长", "实际时长", "强度", "完成状态"};
         Object[][] tableData = {};
         JTable table = new JTable(tableData, columns);
         JScrollPane tableScroll = new JScrollPane(table);
-        tableScroll.setPreferredSize(new Dimension(0, 200));
-
-        // 垂直容器，统计区+表格区
+        // 删除或注释掉tableScroll.setPreferredSize(new Dimension(0, 200));
+        // 保证centerPanel只add statsPanel和tableScroll
+        // ...
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.add(statsPanel);
-        centerPanel.add(Box.createVerticalStrut(10));
         centerPanel.add(tableScroll);
+        // ...
         panel.add(centerPanel, BorderLayout.CENTER);
 
         // 刷新统计和表格
         Runnable refresh = () -> {
             UserProfile selectedUser = (UserProfile) userComboBox.getSelectedItem();
             if (selectedUser == null) {
-                completionLabel.setText("暂无用户");
-                activeDaysLabel.setText("");
+                statsLabel.setText("暂无用户");
                 table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
                 return;
             }
-            List<ExercisePlan> plans = DatabaseManager.getExercisePlansByUser(selectedUser.getName());
+            java.util.List<model.ExercisePlan> plans = DatabaseManager.getExercisePlansByUser(selectedUser.getName());
             if (plans == null || plans.isEmpty()) {
-                completionLabel.setText("暂无运动计划记录");
-                activeDaysLabel.setText("");
+                statsLabel.setText("暂无运动计划记录");
                 table.setModel(new javax.swing.table.DefaultTableModel(new Object[0][0], columns));
                 return;
             }
-            // 按日期升序
-            plans.sort(Comparator.comparing(ExercisePlan::getPlanDate));
-            // 统计完成率
-            int total = plans.size();
-            int completed = (int) plans.stream().filter(ExercisePlan::isCompleted).count();
-            double completionRate = total > 0 ? (double) completed / total * 100 : 0.0;
-            // 统计活跃天数
-            long activeDays = plans.stream().map(ExercisePlan::getPlanDate).distinct().count();
-            // 展示
-            completionLabel.setText(String.format("本周期完成率：%.1f%%", completionRate));
-            activeDaysLabel.setText(String.format("本周期活跃天数：%d天", activeDays));
+            plans.sort(java.util.Comparator.comparing(model.ExercisePlan::getPlanDate));
+            // 统计信息（本周、本月）
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate weekStart = today.with(java.time.DayOfWeek.MONDAY);
+            java.time.LocalDate weekEnd = today.with(java.time.DayOfWeek.SUNDAY);
+            java.time.LocalDate monthStart = today.withDayOfMonth(1);
+            java.time.LocalDate monthEnd = today.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth());
+            String html = "<html>"
+                + getExerciseStats(plans, "本周", weekStart, weekEnd) + "<br>"
+                + getExerciseStats(plans, "本月", monthStart, monthEnd) + "</html>";
+            statsLabel.setText(html);
             // 表格数据
             Object[][] data = new Object[plans.size()][6];
             for (int i = 0; i < plans.size(); i++) {
-                ExercisePlan p = plans.get(i);
+                model.ExercisePlan p = plans.get(i);
                 data[i][0] = p.getPlanDateString();
                 data[i][1] = p.getExerciseType();
                 data[i][2] = p.getDurationString();
@@ -295,6 +289,10 @@ public class DataAnalysisPanel extends JPanel {
             }
             table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
         };
+        // 实际统计方法
+        java.util.function.BiFunction<java.util.List<model.ExercisePlan>, String, String> getStatsHtml = (plans, label) -> {
+            return ""; // 兼容旧代码
+        };
         // 初始刷新
         refresh.run();
         // 用户切换事件
@@ -303,7 +301,7 @@ public class DataAnalysisPanel extends JPanel {
         refreshBtn.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
             String selectedName = selected != null ? selected.getName() : null;
-            List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
+            java.util.List<UserProfile> userList = DatabaseManager.getAllUserProfiles();
             userComboBox.setModel(new DefaultComboBoxModel<>(userList.toArray(new UserProfile[0])));
             if (selectedName != null) {
                 for (int i = 0; i < userComboBox.getItemCount(); i++) {
@@ -372,7 +370,6 @@ public class DataAnalysisPanel extends JPanel {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.add(statsPanel);
-        centerPanel.add(Box.createVerticalStrut(10));
         centerPanel.add(tableScroll);
         panel.add(centerPanel, BorderLayout.CENTER);
 
@@ -474,5 +471,26 @@ public class DataAnalysisPanel extends JPanel {
             refresh.run();
         });
         return panel;
+    }
+
+    private String getExerciseStats(java.util.List<model.ExercisePlan> plans, String label, java.time.LocalDate start, java.time.LocalDate end) {
+        double totalPlan = 0.0, totalActual = 0.0;
+        java.util.Set<java.time.LocalDate> planDays = new java.util.HashSet<>();
+        java.util.Set<java.time.LocalDate> completedDays = new java.util.HashSet<>();
+        for (model.ExercisePlan plan : plans) {
+            java.time.LocalDate d = plan.getPlanDate();
+            if (d == null || d.isBefore(start) || d.isAfter(end)) continue;
+            planDays.add(d);
+            if (plan.getDuration() != null) totalPlan += plan.getDuration();
+            if (plan.isCompleted() && plan.getActualDuration() != null) {
+                totalActual += plan.getActualDuration();
+                completedDays.add(d);
+            }
+        }
+        double rate = totalPlan > 0 ? (totalActual / totalPlan) * 100 : 0;
+        return String.format(
+            "%s计划总时长：%.1f小时，%s实际完成时长：%.1f小时，%s实际完成率：%.1f%%，%s计划天数：%d天，%s实际完成天数：%d天",
+            label, totalPlan, label, totalActual, label, rate, label, planDays.size(), label, completedDays.size()
+        );
     }
 } 
