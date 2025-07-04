@@ -1,16 +1,19 @@
 package ui.panels;
 
+import javax.swing.*;
+import javax.swing.border.*;
+import javax.swing.event.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import service.DatabaseManager;
+import service.SessionManager;
 import model.UserProfile;
 import ui.dialog.AddUserDialog;
 import ui.dialog.ResetPasswordDialog;
-
-import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 用户档案界面面板
@@ -36,8 +39,6 @@ public class UserProfilePanel extends JPanel {
     private JTextField targetWeightField;
     private JComboBox<String> fitnessGoalBox;
     private JTextField targetDateField;
-    private JProgressBar progressBar;
-    private JLabel progressLabel;
     private JTextArea healthNotesArea;
     
     // 健康状况复选框组件
@@ -64,7 +65,7 @@ public class UserProfilePanel extends JPanel {
     // 当前用户档案对象
     private UserProfile currentProfile;
     
-    // 1. 添加多用户相关字段
+    // 多用户相关字段
     private JComboBox<UserProfile> userComboBox;
     private java.util.List<UserProfile> userList;
     private JButton addButton, deleteButton;
@@ -105,9 +106,6 @@ public class UserProfilePanel extends JPanel {
         String[] fitnessGoals = {"减脂塑形", "增肌健身", "维持体重", "增重增肌", "运动康复"};
         fitnessGoalBox = new JComboBox<>(fitnessGoals);
         targetDateField = new JTextField(10);
-        progressBar = new JProgressBar(0, 100);
-        progressBar.setStringPainted(true);
-        progressLabel = new JLabel("进度: 0%");
         healthNotesArea = new JTextArea(2, 20);
         healthNotesArea.setLineWrap(true);
         healthNotesArea.setWrapStyleWord(true);
@@ -135,7 +133,7 @@ public class UserProfilePanel extends JPanel {
         lastUpdatedLabel = new JLabel("最后更新: --");
         createdLabel = new JLabel("创建: --");
         
-        // 1. 添加多用户相关字段
+        // 多用户相关字段
         addButton = new JButton("新增用户");
         deleteButton = new JButton("删除用户");
         
@@ -192,10 +190,6 @@ public class UserProfilePanel extends JPanel {
         clearButton.setFont(defaultFont);
         reportButton.setFont(defaultFont);
         resetPasswordButton.setFont(defaultFont);
-        
-        // 进度条样式
-        progressBar.setFont(getChineseFont(Font.PLAIN, 10));
-        progressLabel.setFont(defaultFont);
         
         // 设置提示文本
         nameField.setToolTipText("请输入您的姓名");
@@ -382,14 +376,6 @@ public class UserProfilePanel extends JPanel {
         autoDateButton.addActionListener(e -> calculateSuggestedTargetDate(true));
         panel.add(autoDateButton, gbc);
         
-        // 第三行：进度条
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 4; gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel progressPanel = new JPanel(new BorderLayout());
-        progressPanel.add(new JLabel("完成进度:"), BorderLayout.WEST);
-        progressPanel.add(progressBar, BorderLayout.CENTER);
-        progressPanel.add(progressLabel, BorderLayout.EAST);
-        panel.add(progressPanel, gbc);
-        
         return panel;
     }
     
@@ -467,65 +453,43 @@ public class UserProfilePanel extends JPanel {
     }
     
     /**
-     * 设置事件处理
+     * 设置事件处理器
      */
     private void setupEventHandlers() {
-        // 实时BMI计算
-        heightField.addKeyListener(new KeyAdapter() {
+        // 添加文档监听器
+        heightField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void keyReleased(KeyEvent e) {
-                validateAndCalculate();
-            }
-        });
-        
-        weightField.addKeyListener(new KeyAdapter() {
+            public void insertUpdate(DocumentEvent e) { validateAndCalculate(); }
             @Override
-            public void keyReleased(KeyEvent e) {
-                validateAndCalculate();
-            }
-        });
-        
-        targetWeightField.addKeyListener(new KeyAdapter() {
+            public void removeUpdate(DocumentEvent e) { validateAndCalculate(); }
             @Override
-            public void keyReleased(KeyEvent e) {
-                updateProgressDisplay();
-            }
+            public void changedUpdate(DocumentEvent e) { validateAndCalculate(); }
+        });
+        weightField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) { validateAndCalculate(); }
+            @Override
+            public void removeUpdate(DocumentEvent e) { validateAndCalculate(); }
+            @Override
+            public void changedUpdate(DocumentEvent e) { validateAndCalculate(); }
+        });
+        targetWeightField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) { validateAndCalculate(); }
+            @Override
+            public void removeUpdate(DocumentEvent e) { validateAndCalculate(); }
+            @Override
+            public void changedUpdate(DocumentEvent e) { validateAndCalculate(); }
         });
         
-        // 健身目标改变时重新验证目标体重的一致性
-        fitnessGoalBox.addActionListener(e -> {
-            // 重新验证目标体重
-            validateAndCalculate();
-        });
-        
-        // 健康状况复选框逻辑
-        setupHealthStatusLogic();
-        
-        // 按钮事件
+        // 添加按钮事件
         saveButton.addActionListener(e -> saveUserProfile());
-        calculateButton.addActionListener(e -> {
-            try {
-                double currentWeight = Double.parseDouble(weightField.getText().trim());
-                double targetWeight = Double.parseDouble(targetWeightField.getText().trim());
-                String fitnessGoal = (String) fitnessGoalBox.getSelectedItem();
-                double height = Double.parseDouble(heightField.getText().trim());
-                if (!isGoalConsistent(currentWeight, targetWeight, fitnessGoal, height)) {
-                    JOptionPane.showMessageDialog(this, "当前体重、目标体重与健身目标不合理，请检查输入！", "提示", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "请填写完整且有效的体重、目标体重和身高！", "提示", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            validateAndCalculate();      // 校验并刷新BMI等
-            calculateSuggestedTargetDate(false); // 自动推算目标日期但不弹窗
-            JOptionPane.showMessageDialog(this, "已经重新计算成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
-        });
-        clearButton.addActionListener(e -> clearAll(true));
+        calculateButton.addActionListener(e -> calculateAll());
+        clearButton.addActionListener(e -> clearAll());
         reportButton.addActionListener(e -> showReport());
         resetPasswordButton.addActionListener(e -> onResetPassword());
         
-        // 1. 添加多用户相关事件
+        // 多用户相关事件
         userComboBox.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
             if (selected != null) {
@@ -534,200 +498,57 @@ public class UserProfilePanel extends JPanel {
                 clearAll(false);
             }
         });
-        addButton.addActionListener(e -> onAddUser());
+        
+        addButton.addActionListener(e -> {
+            AddUserDialog dialog = new AddUserDialog((Frame) SwingUtilities.getWindowAncestor(this));
+            dialog.setVisible(true);
+            if (dialog.isUserCreated()) {
+                refreshUserComboBox();
+            }
+        });
+        
         deleteButton.addActionListener(e -> {
             UserProfile selected = (UserProfile) userComboBox.getSelectedItem();
             if (selected != null) {
-                // 检查是否删除当前登录用户
-                String currentUsername = service.SessionManager.getCurrentUser() != null ? 
-                    service.SessionManager.getCurrentUser().getUsername() : null;
-                if (selected.getName().equals(currentUsername)) {
-                    JOptionPane.showMessageDialog(this, 
-                        "不能删除当前登录的用户！请先切换到其他用户或退出登录。", 
-                        "删除失败", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                
-                int result = JOptionPane.showConfirmDialog(this, 
-                    "确定要删除该用户吗？\n注意：删除用户将同时删除该用户的所有数据（档案、记录、计划等）", 
-                    "确认删除", JOptionPane.YES_NO_OPTION);
+                int result = JOptionPane.showConfirmDialog(this,
+                    "确定要删除用户 " + selected.getName() + " 吗？\n此操作不可恢复！",
+                    "确认删除",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
                 if (result == JOptionPane.YES_OPTION) {
-                    // 使用新的完全删除方法，确保同时删除users表和user_profile表中的数据
-                    boolean success = service.DatabaseManager.deleteUserCompletelyById(selected.getId());
-                    if (success) {
-                        JOptionPane.showMessageDialog(this, "用户删除成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    if (service.DatabaseManager.deleteUserCompletelyById(selected.getId())) {
                         refreshUserComboBox();
-                        clearAll(false);
-                    } else {
-                        JOptionPane.showMessageDialog(this, "用户删除失败！", "错误", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
         });
-    }
-    
-    private void onAddUser() {
-        AddUserDialog dialog = new AddUserDialog((Frame) SwingUtilities.getWindowAncestor(this));
-        dialog.setVisible(true);
-        if (dialog.isUserCreated()) {
-            refreshUserComboBox();
-            JOptionPane.showMessageDialog(this, "新用户创建成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-    
-    /**
-     * 设置健康状况复选框逻辑
-     */
-    private void setupHealthStatusLogic() {
-        // "无特殊疾病史"复选框的特殊逻辑
+        
+        // 健康状况复选框事件
         noHealthIssuesBox.addActionListener(e -> {
-            if (noHealthIssuesBox.isSelected()) {
-                // 选中"无特殊疾病史"时，取消其他所有选项并禁用
+            boolean noIssues = noHealthIssuesBox.isSelected();
+            hypertensionBox.setEnabled(!noIssues);
+            diabetesBox.setEnabled(!noIssues);
+            heartDiseaseBox.setEnabled(!noIssues);
+            jointProblemsBox.setEnabled(!noIssues);
+            allergiesBox.setEnabled(!noIssues);
+            chronicDiseaseBox.setEnabled(!noIssues);
+            otherHealthField.setEnabled(!noIssues);
+            if (noIssues) {
                 hypertensionBox.setSelected(false);
                 diabetesBox.setSelected(false);
                 heartDiseaseBox.setSelected(false);
                 jointProblemsBox.setSelected(false);
                 allergiesBox.setSelected(false);
                 chronicDiseaseBox.setSelected(false);
-                hypertensionBox.setEnabled(false);
-                diabetesBox.setEnabled(false);
-                heartDiseaseBox.setEnabled(false);
-                jointProblemsBox.setEnabled(false);
-                allergiesBox.setEnabled(false);
-                chronicDiseaseBox.setEnabled(false);
                 otherHealthField.setText("");
-                otherHealthField.setEnabled(false);
-            } else {
-                // 取消"无特殊疾病史"时，重新启用其他选项
-                hypertensionBox.setEnabled(true);
-                diabetesBox.setEnabled(true);
-                heartDiseaseBox.setEnabled(true);
-                jointProblemsBox.setEnabled(true);
-                allergiesBox.setEnabled(true);
-                chronicDiseaseBox.setEnabled(true);
-                otherHealthField.setEnabled(true);
-            }
-        });
-        
-        // 其他健康状况复选框的逻辑
-        JCheckBox[] healthIssueBoxes = {
-            hypertensionBox, diabetesBox, heartDiseaseBox, 
-            jointProblemsBox, allergiesBox, chronicDiseaseBox
-        };
-        
-        for (JCheckBox box : healthIssueBoxes) {
-            box.addActionListener(e -> {
-                if (box.isSelected()) {
-                    // 选中任何健康问题时，自动取消"无特殊疾病史"
-                    noHealthIssuesBox.setSelected(false);
-                    hypertensionBox.setEnabled(true);
-                    diabetesBox.setEnabled(true);
-                    heartDiseaseBox.setEnabled(true);
-                    jointProblemsBox.setEnabled(true);
-                    allergiesBox.setEnabled(true);
-                    chronicDiseaseBox.setEnabled(true);
-                    otherHealthField.setEnabled(true);
-                }
-            });
-        }
-        // "其它"输入框联动逻辑
-        otherHealthField.addKeyListener(new java.awt.event.KeyAdapter() {
-            @Override
-            public void keyReleased(java.awt.event.KeyEvent e) {
-                if (!otherHealthField.getText().trim().isEmpty()) {
-                    noHealthIssuesBox.setSelected(false);
-                    hypertensionBox.setEnabled(true);
-                    diabetesBox.setEnabled(true);
-                    heartDiseaseBox.setEnabled(true);
-                    jointProblemsBox.setEnabled(true);
-                    allergiesBox.setEnabled(true);
-                    chronicDiseaseBox.setEnabled(true);
-                    otherHealthField.setEnabled(true);
-                }
             }
         });
     }
-    
+
     /**
-     * 设置默认值
-     */
-    private void setupDefaults() {
-        // 设置默认目标日期为3个月后
-        LocalDate defaultTarget = LocalDate.now().plusMonths(3);
-        targetDateField.setText(defaultTarget.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        
-        // 设置默认健康备注
-        healthNotesArea.setText("无特殊备注");
-        
-        // 设置默认健康状况为"无特殊疾病史"
-        noHealthIssuesBox.setSelected(true);
-        // 触发事件处理器来禁用其他选项
-        noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
-        
-        updateStatusLabels();
-    }
-    
-    /**
-     * 验证输入并计算BMI
+     * 验证输入并计算BMI等数据
      */
     private void validateAndCalculate() {
-        // 验证身高
-        validateFieldValue(heightField, "身高", (text) -> {
-            try {
-                double height = Double.parseDouble(text);
-                return UserProfile.validateHeight(height);
-            } catch (NumberFormatException e) {
-                return new UserProfile.ValidationResult(false, "请输入有效的数字");
-            }
-        });
-        
-        // 验证体重
-        validateFieldValue(weightField, "体重", (text) -> {
-            try {
-                double weight = Double.parseDouble(text);
-                return UserProfile.validateWeight(weight);
-            } catch (NumberFormatException e) {
-                return new UserProfile.ValidationResult(false, "请输入有效的数字");
-            }
-        });
-        
-        // 验证目标体重
-        validateFieldValue(targetWeightField, "目标体重", (text) -> {
-            try {
-                if (text.isEmpty()) {
-                    return new UserProfile.ValidationResult(true, "目标体重为可选项");
-                }
-                double targetWeight = Double.parseDouble(text);
-                String currentWeightText = weightField.getText().trim();
-                if (!currentWeightText.isEmpty()) {
-                    try {
-                        double currentWeight = Double.parseDouble(currentWeightText);
-                        
-                        // 首先验证目标体重本身
-                        UserProfile.ValidationResult targetResult = UserProfile.validateTargetWeight(currentWeight, targetWeight);
-                        if (!targetResult.isValid()) {
-                            return targetResult;
-                        }
-                        
-                        // 然后验证与健身目标的一致性
-                        String fitnessGoal = (String) fitnessGoalBox.getSelectedItem();
-                        UserProfile.ValidationResult consistencyResult = UserProfile.validateGoalConsistency(currentWeight, targetWeight, fitnessGoal);
-                        if (!consistencyResult.isValid()) {
-                            return consistencyResult;
-                        }
-                        
-                        return new UserProfile.ValidationResult(true, "目标体重设置合理且与健身目标一致");
-                    } catch (NumberFormatException e) {
-                        return UserProfile.validateWeight(targetWeight);
-                    }
-                }
-                return UserProfile.validateWeight(targetWeight);
-            } catch (NumberFormatException e) {
-                return new UserProfile.ValidationResult(false, "请输入有效的数字");
-            }
-        });
-        
-        // 如果身高和体重都有效，计算BMI
         try {
             String heightText = heightField.getText().trim();
             String weightText = weightField.getText().trim();
@@ -753,8 +574,6 @@ public class UserProfilePanel extends JPanel {
                     double minIdeal = 18.5 * (height / 100) * (height / 100);
                     double maxIdeal = 24.0 * (height / 100) * (height / 100);
                     idealWeightLabel.setText(String.format("理想体重: %.0f-%.0f kg", minIdeal, maxIdeal));
-                    
-                    updateProgressDisplay();
                 } else {
                     // 清空BMI显示
                     bmiLabel.setText("BMI: --");
@@ -766,138 +585,32 @@ public class UserProfilePanel extends JPanel {
             // 格式错误已经在上面处理了
         }
     }
-    
-    /**
-     * 验证单个字段的值
-     */
-    private void validateFieldValue(JTextField field, String fieldName, FieldValidator validator) {
-        String text = field.getText().trim();
-        
-        if (text.isEmpty()) {
-            field.setBackground(Color.WHITE);
-            field.setToolTipText("请输入" + fieldName);
-            return;
-        }
-        
-        UserProfile.ValidationResult result = validator.validate(text);
-        if (result.isValid()) {
-            field.setBackground(Color.WHITE);
-            field.setToolTipText(result.getMessage());
-        } else {
-            field.setBackground(new Color(255, 220, 220));
-            field.setToolTipText("错误: " + result.getMessage());
-        }
-    }
-    
-    /**
-     * 字段验证器接口
-     */
-    private interface FieldValidator {
-        UserProfile.ValidationResult validate(String text);
-    }
-    
-    /**
-     * 获取BMI分类
-     */
-    private String getBMICategory(double bmi) {
-        if (bmi < 18.5) return "偏瘦";
-        if (bmi < 24.0) return "正常";
-        if (bmi < 28.0) return "超重";
-        return "肥胖";
-    }
-    
-    /**
-     * 获取BMI对应的颜色
-     */
-    private Color getBMIColor(double bmi) {
-        if (bmi < 18.5) return Color.RED;           // 偏瘦
-        if (bmi < 24.0) return new Color(0, 150, 0); // 正常（绿色）
-        if (bmi < 28.0) return Color.ORANGE;        // 超重（橙色）
-        return Color.RED;                           // 肥胖
-    }
-    
-    /**
-     * 更新进度显示
-     */
-    private void updateProgressDisplay() {
-        try {
-            String weightText = weightField.getText().trim();
-            String targetText = targetWeightField.getText().trim();
-            
-            if (!weightText.isEmpty() && !targetText.isEmpty()) {
-                double currentWeight = Double.parseDouble(weightText);
-                double targetWeight = Double.parseDouble(targetText);
-                
-                // 假设起始体重比当前重3kg（简化计算）
-                double startWeight = currentWeight + (currentWeight > targetWeight ? 3 : -3);
-                
-                if (startWeight != targetWeight) {
-                    double progress = Math.abs((startWeight - currentWeight) / (startWeight - targetWeight)) * 100;
-                    progress = Math.max(0, Math.min(100, progress));
-                    
-                    progressBar.setValue((int) progress);
-                    progressLabel.setText(String.format("%.0f%% 完成", progress));
-                    
-                    double diff = currentWeight - targetWeight;
-                    if (Math.abs(diff) < 0.5) {
-                        progressLabel.setText("目标达成！");
-                        progressLabel.setForeground(Color.GREEN);
-                    } else {
-                        String direction = diff > 0 ? "减重" : "增重";
-                        progressLabel.setText(String.format("需%s: %.1fkg", direction, Math.abs(diff)));
-                        progressLabel.setForeground(Color.BLACK);
-                    }
-                }
-            }
-        } catch (NumberFormatException e) {
-            // 忽略解析错误
-        }
-    }
-    
-    /**
-     * 计算建议目标日期
-     */
-    private void calculateSuggestedTargetDate(boolean showDialog) {
-        try {
-            String weightText = weightField.getText().trim();
-            String targetText = targetWeightField.getText().trim();
-            
-            if (!weightText.isEmpty() && !targetText.isEmpty()) {
-                double currentWeight = Double.parseDouble(weightText);
-                double targetWeight = Double.parseDouble(targetText);
-                double weightDiff = Math.abs(currentWeight - targetWeight);
-                
-                // 健康减重速度：0.5kg/周，增重速度：0.3kg/周
-                double weeklyRate = targetWeight < currentWeight ? 0.5 : 0.3;
-                int weeksNeeded = (int) Math.ceil(weightDiff / weeklyRate);
-                
-                LocalDate suggestedDate = LocalDate.now().plusWeeks(weeksNeeded);
-                targetDateField.setText(suggestedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-                
-                if (showDialog) {
-                    JOptionPane.showMessageDialog(this,
-                        String.format("建议在 %d 周内达成目标\n每周%s约 %.1fkg",
-                            weeksNeeded,
-                            targetWeight < currentWeight ? "减重" : "增重",
-                            weeklyRate),
-                        "目标日期建议",
-                        JOptionPane.INFORMATION_MESSAGE);
-                }
-            }
-        } catch (NumberFormatException e) {
-            if (showDialog) {
-                JOptionPane.showMessageDialog(this, "请先填写当前体重和目标体重！", "提示", JOptionPane.WARNING_MESSAGE);
-            }
-        }
-    }
-    
+
     /**
      * 计算所有数据
      */
     private void calculateAll() {
         validateAndCalculate();
-        updateProgressDisplay();
         JOptionPane.showMessageDialog(this, "计算完成！", "提示", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    /**
+     * 设置默认值
+     */
+    private void setupDefaults() {
+        // 设置默认目标日期为3个月后
+        LocalDate defaultTarget = LocalDate.now().plusMonths(3);
+        targetDateField.setText(defaultTarget.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        
+        // 设置默认健康备注
+        healthNotesArea.setText("无特殊备注");
+        
+        // 设置默认健康状况为"无特殊疾病史"
+        noHealthIssuesBox.setSelected(true);
+        // 触发事件处理器来禁用其他选项
+        noHealthIssuesBox.getActionListeners()[0].actionPerformed(null);
+        
+        updateStatusLabels();
     }
     
     /**
@@ -1165,6 +878,7 @@ public class UserProfilePanel extends JPanel {
                 return;
             }
         }
+        
         nameField.setText("");
         ageSpinner.setValue(25);
         maleRadio.setSelected(true);
@@ -1188,8 +902,6 @@ public class UserProfilePanel extends JPanel {
         bmiLabel.setText("BMI: --");
         categoryLabel.setText("健康状态: --");
         idealWeightLabel.setText("理想体重: --");
-        progressBar.setValue(0);
-        progressLabel.setText("进度: 0%");
         heightField.setBackground(Color.WHITE);
         weightField.setBackground(Color.WHITE);
         currentProfile = null;
@@ -1313,20 +1025,133 @@ public class UserProfilePanel extends JPanel {
         dialog.setVisible(true);
     }
     
-    // 健身目标合理性校验
-    private boolean isGoalConsistent(double currentWeight, double targetWeight, String fitnessGoal, double height) {
-        double bmi = (height > 0) ? currentWeight / Math.pow(height / 100.0, 2) : 0.0;
-        if (fitnessGoal != null && (fitnessGoal.contains("增肌") || fitnessGoal.contains("增重"))) {
-            if (currentWeight >= targetWeight) return false;
-            if (bmi >= 24.0) return false; // 超重及以上不建议增肌
+    /**
+     * 设置健康状况复选框逻辑
+     */
+    private void setupHealthStatusLogic() {
+        // "无特殊疾病史"复选框的特殊逻辑
+        noHealthIssuesBox.addActionListener(e -> {
+            if (noHealthIssuesBox.isSelected()) {
+                // 选中"无特殊疾病史"时，取消其他所有选项并禁用
+                hypertensionBox.setSelected(false);
+                diabetesBox.setSelected(false);
+                heartDiseaseBox.setSelected(false);
+                jointProblemsBox.setSelected(false);
+                allergiesBox.setSelected(false);
+                chronicDiseaseBox.setSelected(false);
+                hypertensionBox.setEnabled(false);
+                diabetesBox.setEnabled(false);
+                heartDiseaseBox.setEnabled(false);
+                jointProblemsBox.setEnabled(false);
+                allergiesBox.setEnabled(false);
+                chronicDiseaseBox.setEnabled(false);
+                otherHealthField.setText("");
+                otherHealthField.setEnabled(false);
+            } else {
+                // 取消"无特殊疾病史"时，重新启用其他选项
+                hypertensionBox.setEnabled(true);
+                diabetesBox.setEnabled(true);
+                heartDiseaseBox.setEnabled(true);
+                jointProblemsBox.setEnabled(true);
+                allergiesBox.setEnabled(true);
+                chronicDiseaseBox.setEnabled(true);
+                otherHealthField.setEnabled(true);
+            }
+        });
+        
+        // 其他健康状况复选框的逻辑
+        JCheckBox[] healthIssueBoxes = {
+            hypertensionBox, diabetesBox, heartDiseaseBox, 
+            jointProblemsBox, allergiesBox, chronicDiseaseBox
+        };
+        
+        for (JCheckBox box : healthIssueBoxes) {
+            box.addActionListener(e -> {
+                if (box.isSelected()) {
+                    // 选中任何健康问题时，自动取消"无特殊疾病史"
+                    noHealthIssuesBox.setSelected(false);
+                    hypertensionBox.setEnabled(true);
+                    diabetesBox.setEnabled(true);
+                    heartDiseaseBox.setEnabled(true);
+                    jointProblemsBox.setEnabled(true);
+                    allergiesBox.setEnabled(true);
+                    chronicDiseaseBox.setEnabled(true);
+                    otherHealthField.setEnabled(true);
+                }
+            });
         }
-        if (fitnessGoal != null && (fitnessGoal.contains("减脂") || fitnessGoal.contains("减重"))) {
-            if (currentWeight <= targetWeight) return false;
-            if (bmi < 18.5) return false; // 偏瘦不建议减脂
+        // "其它"输入框联动逻辑
+        otherHealthField.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                if (!otherHealthField.getText().trim().isEmpty()) {
+                    noHealthIssuesBox.setSelected(false);
+                    hypertensionBox.setEnabled(true);
+                    diabetesBox.setEnabled(true);
+                    heartDiseaseBox.setEnabled(true);
+                    jointProblemsBox.setEnabled(true);
+                    allergiesBox.setEnabled(true);
+                    chronicDiseaseBox.setEnabled(true);
+                    otherHealthField.setEnabled(true);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 计算建议目标日期
+     */
+    private void calculateSuggestedTargetDate(boolean showDialog) {
+        try {
+            String weightText = weightField.getText().trim();
+            String targetText = targetWeightField.getText().trim();
+            
+            if (!weightText.isEmpty() && !targetText.isEmpty()) {
+                double currentWeight = Double.parseDouble(weightText);
+                double targetWeight = Double.parseDouble(targetText);
+                double weightDiff = Math.abs(currentWeight - targetWeight);
+                
+                // 健康减重速度：0.5kg/周，增重速度：0.3kg/周
+                double weeklyRate = targetWeight < currentWeight ? 0.5 : 0.3;
+                int weeksNeeded = (int) Math.ceil(weightDiff / weeklyRate);
+                
+                LocalDate suggestedDate = LocalDate.now().plusWeeks(weeksNeeded);
+                targetDateField.setText(suggestedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                
+                if (showDialog) {
+                    JOptionPane.showMessageDialog(this,
+                        String.format("建议在 %d 周内达成目标\n每周%s约 %.1fkg",
+                            weeksNeeded,
+                            targetWeight < currentWeight ? "减重" : "增重",
+                            weeklyRate),
+                        "目标日期建议",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (NumberFormatException e) {
+            if (showDialog) {
+                JOptionPane.showMessageDialog(this, "请先填写当前体重和目标体重！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
         }
-        if (fitnessGoal != null && fitnessGoal.contains("维持")) {
-            if (Math.abs(currentWeight - targetWeight) > 2) return false;
-        }
-        return true;
+    }
+    
+    /**
+     * 获取BMI分类
+     */
+    private String getBMICategory(double bmi) {
+        if (bmi < 18.5) return "偏瘦";
+        if (bmi < 24.0) return "正常";
+        if (bmi < 28.0) return "超重";
+        return "肥胖";
+    }
+    
+    /**
+     * 获取BMI对应的颜色
+     */
+    private Color getBMIColor(double bmi) {
+        if (bmi < 18.5) return Color.RED;           // 偏瘦
+        if (bmi < 24.0) return new Color(0, 150, 0); // 正常（绿色）
+        if (bmi < 28.0) return Color.ORANGE;        // 超重（橙色）
+        return Color.RED;                           // 肥胖
     }
 } 

@@ -784,6 +784,17 @@ public class ExercisePlanPanel extends JPanel {
                 ExercisePlan plan = currentPlans.get(row);
                 boolean newValue = (Boolean) value;
                 if (plan.isCompleted() != newValue) {
+                    // 新增：检查计划日期是否为未来日期
+                    if (newValue && plan.getPlanDate().isAfter(LocalDate.now())) {
+                        JOptionPane.showMessageDialog(ExercisePlanPanel.this,
+                            "不能将未来日期的计划标记为已完成！",
+                            "操作无效",
+                            JOptionPane.WARNING_MESSAGE);
+                        // 刷新表格，确保复选框状态正确
+                        fireTableDataChanged();
+                        return;
+                    }
+                    
                     // 新增：如果标记为完成且没有实际时长，提示输入
                     if (newValue && plan.getActualDuration() == null) {
                         String actualDurationStr = JOptionPane.showInputDialog(

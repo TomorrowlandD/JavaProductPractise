@@ -1,79 +1,144 @@
-@startuml 健康管理系统整体类图
+@startuml
 
-!theme plain
-skinparam classAttributeIconSize 0
-skinparam classFontSize 12
-skinparam classFontName 微软雅黑
-skinparam arrowColor #2C3E50
-skinparam classBackgroundColor #ECF0F1
-skinparam classBorderColor #34495E
-
-' 定义抽象类
-class "主窗口类" as MainWindow {
-  + 创建和管理主窗口界面
-  + 包含5个功能标签页
-  + 处理用户登录登出
+' 使用默认的手绘风格
+skinparam style strictuml
+' 使用更现代的字体
+skinparam defaultFontName Microsoft YaHei
+' 设置背景色为白色
+skinparam backgroundColor white
+' 设置类图样式
+skinparam class {
+    BackgroundColor white
+    ArrowColor black
+    BorderColor black
 }
 
-class "面板类" as Panels {
-  + 用户档案面板
-  + 每日记录面板
-  + 运动计划面板
-  + 饮食管理面板
-  + 数据分析面板
+' 定义包外的基类
+class JDialog
+
+' 定义类
+class "主窗口类" {
+  +创建和管理主窗口界面
+  +包含5个功能标签页
+  +处理用户登录登出
 }
 
-class "对话框类" as Dialogs {
-  + 登录对话框
-  + 注册对话框
-  + 添加用户对话框
-  + 重置密码对话框
-  + 修改密码对话框
-  + 删除账号对话框
+class "面板类" {
+  +用户档案面板
+  +每日记录面板
+  +运动计划面板
+  +饮食管理面板
+  +数据分析面板
 }
 
-class "实体类" as Entities {
-  + 用户(User)
-  + 用户档案(UserProfile)
-  + 每日记录(DailyRecord)
-  + 运动计划(ExercisePlan)
-  + 饮食记录(DietRecord)
+class "对话框类" {
+  +登录对话框
+  +注册对话框
+  +添加用户对话框
+  +重置密码对话框
+  +修改密码对话框
+  +删除账号对话框
 }
 
-class "统计类" as Statistics {
-  + 饮食统计(DietStats)
-  + 运动统计(ExerciseStats)
-  + 健康统计(HealthStats)
+class "服务类" {
+  +数据库管理(DatabaseManager)
+  +会话管理(SessionManager)
 }
 
-class "服务类" as Services {
-  + 数据库管理(DatabaseManager)
-  + 会话管理(SessionManager)
+class "统计类" {
+  +饮食统计(DietStats)
+  +运动统计(ExerciseStats)
+  +健康统计(HealthStats)
+}
+
+class "实体类" {
+  +用户(User)
+  +用户档案(UserProfile)
+  +每日记录(DailyRecord)
+  +运动计划(ExercisePlan)
+  +饮食记录(DietRecord)
 }
 
 ' 定义关系
-' 组合关系：主窗口包含面板
-MainWindow *-- Panels : 包含
+主窗口类 *-- 面板类 : 包含
+主窗口类 ..> 对话框类 : 调用
+'对话框类 ..> 主窗口类 : 调用
+面板类 ..> 对话框类 : 调用
+面板类 ..> 实体类 : 数据操作
+面板类 ..> 服务类 : 数据库操作
+对话框类 ..> 服务类 : 业务处理
+服务类 ..> 实体类 : 数据持久化
+统计类 ..> 实体类 : 数据计算
 
-' 依赖关系：主窗口依赖对话框
-MainWindow ..> Dialogs : 调用
+package "javax.swing" {
+    class JDialog
+}
 
-' 依赖关系：面板依赖对话框
-Panels ..> Dialogs : 调用
+package "ui.dialog" {
+    ' 使用布局指令控制位置
+    together {
+        ' 把LoginDialog放在中心位置
+        class LoginDialog extends JDialog {
+            - usernameField: JTextField
+            - passwordField: JPasswordField
+            - loginButton: JButton
+            - cancelButton: JButton
+            - registerButton: JButton
+            - changePasswordButton: JButton
+            - deleteAccountButton: JButton
+            - loginSuccess: boolean
+            + LoginDialog()
+            - performLogin(): void
+            - onRegister(): void
+            - onChangePassword(): void
+            - onDeleteAccount(): void
+            + isLoginSuccess(): boolean
+            + {static} showLoginDialog(): boolean
+        }
 
-' 依赖关系：面板依赖实体类
-Panels ..> Entities : 数据操作
+        ' 把被LoginDialog依赖的对话框放在右侧
+        class RegisterDialog extends JDialog {
+            - usernameField: JTextField
+            - passwordField: JPasswordField
+            + RegisterDialog(owner: Frame)
+        }
 
-' 依赖关系：对话框依赖服务类
-Dialogs ..> Services : 业务处理
+        class UserChangePasswordDialog extends JDialog {
+            - oldPasswordField: JPasswordField
+            - newPasswordField: JPasswordField
+            + UserChangePasswordDialog(owner: Frame)
+        }
 
-' 依赖关系：服务类依赖实体类
-Services ..> Entities : 数据持久化
+        class UserDeleteAccountDialog extends JDialog {
+            - passwordField: JPasswordField
+            + UserDeleteAccountDialog(owner: Frame)
+        }
+    }
 
-' 依赖关系：统计类依赖实体类
-Statistics ..> Entities : 数据计算
+    ' 把不相关的对话框放在另一侧
+    together {
+        class AddUserDialog extends JDialog {
+            - usernameField: JTextField
+            - passwordField: JPasswordField
+            + AddUserDialog(owner: Frame)
+        }
 
-' 依赖关系：服务类之间依赖
-Services ..> Services : 认证流程
+        class ResetPasswordDialog extends JDialog {
+            - usernameField: JTextField
+            - passwordField: JPasswordField
+            + ResetPasswordDialog(owner: Frame)
+        }
+    }
 
-@enduml 
+    ' 定义依赖关系
+    LoginDialog ..> RegisterDialog
+    LoginDialog ..> UserChangePasswordDialog
+    LoginDialog ..> UserDeleteAccountDialog
+}
+
+' 布局优化
+RegisterDialog -[hidden]-> UserChangePasswordDialog
+UserChangePasswordDialog -[hidden]-> UserDeleteAccountDialog
+AddUserDialog -[hidden]-> ResetPasswordDialog
+
+@enduml
