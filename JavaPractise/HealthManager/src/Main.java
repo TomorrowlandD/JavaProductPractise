@@ -13,7 +13,7 @@ public class Main {
         try {
             javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            // 使用默认Look and Feel
+
         }
         
         // 显示登录对话框

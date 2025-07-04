@@ -105,7 +105,6 @@ public class RegisterDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "注册失败，请重试。", "注册失败", JOptionPane.ERROR_MESSAGE);
         }
     }
-
     public boolean isRegisterSuccess() {
         return registerSuccess;
     }

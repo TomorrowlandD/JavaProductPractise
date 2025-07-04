@@ -180,10 +180,6 @@ public class ExercisePlan {
             return new ValidationResult(false, "计划日期不能为空");
         }
 
-        if (planDate.isBefore(LocalDate.now())) {
-            return new ValidationResult(false, "计划日期不能早于今天");
-        }
-
         if (duration != null && (duration <= 0 || duration > 24)) {
             return new ValidationResult(false, "计划时长必须在0-24小时之间");
         }

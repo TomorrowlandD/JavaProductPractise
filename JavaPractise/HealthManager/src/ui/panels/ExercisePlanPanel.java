@@ -164,6 +164,7 @@ public class ExercisePlanPanel extends JPanel {
         otherPanel.add(otherTypeField);
         exerciseTypePanel.add(otherPanel);
         dateField = new JTextField(10);
+        dateField.setToolTipText("支持添加历史运动记录，格式：yyyy-MM-dd");  // 添加提示文本
         durationField = new JTextField(5);
         actualDurationField = new JTextField(5); // 新增：实际时长输入框
         intensityBox = new JComboBox<>(ExercisePlan.INTENSITY_LEVELS);
@@ -578,6 +579,31 @@ public class ExercisePlanPanel extends JPanel {
         LocalDate planDate;
         try {
             planDate = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            
+            // 对历史数据的特殊处理
+            LocalDate today = LocalDate.now();
+            if (planDate.isBefore(today)) {
+                // 如果是编辑模式且日期未改变，不显示警告
+                boolean showWarning = true;
+                if (editingPlanId != -1 && originalPlan != null && 
+                    originalPlan.getPlanDate().equals(planDate)) {
+                    showWarning = false;
+                }
+                
+                if (showWarning) {
+                    int result = JOptionPane.showConfirmDialog(this,
+                        String.format("您正在添加%s的历史运动记录。\n\n是否继续？",
+                            planDate.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"))),
+                        "添加历史记录确认",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE);
+                    
+                    if (result != JOptionPane.YES_OPTION) {
+                        dateField.requestFocus();
+                        return;
+                    }
+                }
+            }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", "提示", JOptionPane.WARNING_MESSAGE);
             return;
